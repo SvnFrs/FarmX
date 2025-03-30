@@ -56,26 +56,50 @@ export default function CameraScreen() {
     setFlash((current) => (current === "off" ? "on" : "off"));
   };
 
+  const uploadImageForAnalysis = async (imageUri: string) => {
+    try {
+      // Show loading state
+      Alert.alert("Uploading...", "Sending image for analysis");
+
+      // First, fetch the image file content
+      const response = await fetch(imageUri);
+      const blob = await response.blob();
+
+      // Send to your API
+      const apiResponse = await fetch("http://192.168.1.6:4000/analyze", {
+        method: "POST",
+        body: blob,
+        headers: {
+          "Content-Type": "image/jpeg", // Assuming JPEG image
+        },
+      });
+
+      // Handle the response
+      if (apiResponse.ok) {
+        const result = await apiResponse.json();
+        Alert.alert(
+          "Analysis Complete",
+          `Intestine Percentage: ${result.analysis.intestinePercentage}%\n` +
+            `Muscle Percentage: ${result.analysis.musclePercentage}%\n` +
+            `Confidence: ${result.analysis.confidence}%\n` +
+            `Quality: ${result.analysis.quality}`,
+        );
+      } else {
+        const errorData = await apiResponse.json();
+        Alert.alert("Error", errorData.error || "Failed to analyze image");
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+      Alert.alert(
+        "Error",
+        `Failed to connect to analysis server: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  };
+
   const analyzeShrimpImage = () => {
     if (!capturedImage) return;
-
-    Alert.alert(
-      "Analyzing Shrimp",
-      "Sending to AI for analysis...\n(This is a placeholder for the actual AI analysis)",
-      [
-        {
-          text: "OK",
-          onPress: () => {
-            // Simulate analysis result
-            setTimeout(() => {
-              Alert.alert("Analysis Complete", "Gut to Muscle Ratio: 32%", [
-                { text: "OK", onPress: () => setCapturedImage(null) },
-              ]);
-            }, 2000);
-          },
-        },
-      ],
-    );
+    uploadImageForAnalysis(capturedImage);
   };
 
   const retakePhoto = () => {
