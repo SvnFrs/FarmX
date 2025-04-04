@@ -1,3 +1,4 @@
+import TablerIconComponent from "@/components/icon";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { Tabs } from "expo-router";
 import { StatusBar } from "react-native";
@@ -14,7 +15,7 @@ export default function TabLayout() {
           options={{
             title: "Tin tức",
             tabBarIcon: ({ color }) => (
-              <FontAwesome size={28} name="home" color={color} />
+              <TablerIconComponent name="fish" size={24} />
             ),
           }}
         />
@@ -23,7 +24,7 @@ export default function TabLayout() {
           options={{
             title: "Mua hàng",
             tabBarIcon: ({ color }) => (
-              <FontAwesome size={28} name="address-book" color={color} />
+              <TablerIconComponent name="building-store" size={24} />
             ),
           }}
         />
@@ -32,7 +33,7 @@ export default function TabLayout() {
           options={{
             title: "Camera",
             tabBarIcon: ({ color }) => (
-              <FontAwesome size={28} name="camera" color={color} />
+              <TablerIconComponent name="camera" size={24} />
             ),
           }}
         />
@@ -41,7 +42,7 @@ export default function TabLayout() {
           options={{
             title: "Vụ nuôi",
             tabBarIcon: ({ color }) => (
-              <FontAwesome size={28} name="cog" color={color} />
+              <TablerIconComponent name="fish" size={24} />
             ),
           }}
         />
@@ -50,7 +51,7 @@ export default function TabLayout() {
           options={{
             title: "Thông báo",
             tabBarIcon: ({ color }) => (
-              <FontAwesome size={28} name="cog" color={color} />
+              <TablerIconComponent name="bell" size={24} />
             ),
           }}
         />

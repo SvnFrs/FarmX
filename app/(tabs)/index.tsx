@@ -1,11 +1,45 @@
-import { Image, ScrollView, Text, View } from "react-native";
+import { Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import "../../global.css";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { SafeAreaView } from "react-native-safe-area-context";
+import TablerIconComponent from "@/components/icon";
+import { useState } from "react";
+import { StatusBar } from "react-native";
+
+type ReactionType = "like" | "heart" | null;
+
+interface Post {
+  id: number;
+  author: string;
+  time: string;
+  content: string;
+  reaction: ReactionType;
+}
 
 export default function Index() {
+  const [posts, setPosts] = useState<Post[]>(
+    Array.from({ length: 10 }).map((_, index) => ({
+      id: index,
+      author: "Nguyễn Văn",
+      time: "1 giờ trước",
+      content:
+        "Ngày 12/3, Phòng Cảnh sát Kinh Tế (CSKT) Công an tỉnh An Giang Phối hợp với Thanh tra Sở Nông nghiệp và Phát triển nông thôn để làm rõ công...",
+      reaction: null,
+    })),
+  );
+
+  const toggleLike = (postId: number) => {
+    setPosts((prevPosts) =>
+      prevPosts.map((post) =>
+        post.id === postId
+          ? { ...post, reaction: post.reaction === "like" ? null : "like" }
+          : post,
+      ),
+    );
+  };
+
   return (
     <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
+      <StatusBar barStyle="dark-content" />
       <ScrollView
         contentContainerStyle={{ flexGrow: 1 }}
         showsVerticalScrollIndicator={false}
@@ -14,7 +48,7 @@ export default function Index() {
         <View className="flex-1 flex-col gap-10 px-10 -mx-8">
           <View className="flex flex-row items-center justify-between">
             <View className="flex-1">
-              <FontAwesome size={28} name="user" />
+              <TablerIconComponent name="user" size={24} />
             </View>
 
             <View className="flex-2 items-center">
@@ -24,28 +58,24 @@ export default function Index() {
             <View className="flex-1"></View>
           </View>
 
-          {Array.from({ length: 10 }).map((_, index) => (
-            <View className="flex flex-col gap-5" key={index}>
+          {posts.map((post) => (
+            <View className="flex flex-col gap-5" key={post.id}>
               <View className="flex flex-row justify-between items-center">
                 <View className="flex flex-row items-center gap-3">
-                  <FontAwesome size={36} name="user" />
-                  <View className="flex flex-col gap-1">
+                  <TablerIconComponent name="user" size={24} />
+                  <View className="flex flex-col">
                     <Text className="text-start text-lg font-semibold">
-                      Nguyễn Văn
+                      {post.author}
                     </Text>
-                    <Text className="text-start text-sm">1 giờ trước</Text>
+                    <Text className="text-start text-sm">{post.time}</Text>
                   </View>
                 </View>
                 <Text className="text-end">
-                  <FontAwesome size={28} name="bookmark" />
+                  <TablerIconComponent name="dots" size={24} />
                 </Text>
               </View>
 
-              <Text className="text-start text-sm">
-                Ngày 12/3, Phòng Cảnh sát Kinh Tế (CSKT) Công an tỉnh An Giang
-                Phối hợp với Thanh tra Sở Nông nghiệp và Phát triển nông thôn để
-                làm rõ công...
-              </Text>
+              <Text className="text-start text-sm">{post.content}</Text>
 
               <Image
                 source={require("../../assets/images/cong-an.jpg")}
@@ -54,29 +84,61 @@ export default function Index() {
 
               <View className="flex flex-col gap-5">
                 <View className="flex flex-row justify-between items-center">
-                  <View className="flex flex-row items-center gap-2">
+                  <View className="flex flex-row items-center gap-1">
                     <View className="flex flex-row">
-                      <FontAwesome size={18} name="star" />
-                      <FontAwesome size={18} name="heart" />
+                      {post.reaction === "like" && (
+                        <TablerIconComponent
+                          name="thumb-up"
+                          size={18}
+                          color="#1877F2"
+                        />
+                      )}
+                      {post.reaction === "heart" && (
+                        <TablerIconComponent
+                          name="heart"
+                          size={18}
+                          color="#FF0000"
+                        />
+                      )}
+                      {post.reaction === null && (
+                        <TablerIconComponent
+                          name="thumb-up"
+                          size={18}
+                          color="#000000"
+                        />
+                      )}
                     </View>
-                    <Text className="text-xs">nguyenvan và 3 người khác</Text>
+                    <Text className="text-xs">
+                      {post.reaction === "like" ? "Bạn" : "Chưa ai cả"}
+                    </Text>
                   </View>
 
-                  <Text className="text-xs">5 bình luận</Text>
+                  <Text className="text-xs">Chưa có bình luận</Text>
                 </View>
-                <View className="flex flex-row justify-between items-center">
-                  <View className="flex flex-row gap-2 items-center">
-                    <FontAwesome size={20} name="heart" />
-                    <Text className="text-sm">Thích</Text>
-                  </View>
+                <View className="flex flex-row justify-between items-center px-3">
+                  <TouchableOpacity
+                    className="flex flex-row gap-2 items-center"
+                    onPress={() => toggleLike(post.id)}
+                  >
+                    <TablerIconComponent
+                      name="thumb-up"
+                      size={18}
+                      color={post.reaction === "like" ? "#1877F2" : undefined}
+                    />
+                    <Text
+                      className={`text-sm ${post.reaction === "like" ? "text-[#1877F2]" : ""}`}
+                    >
+                      Thích
+                    </Text>
+                  </TouchableOpacity>
 
                   <View className="flex flex-row gap-2 items-center">
-                    <FontAwesome size={20} name="comment" />
+                    <TablerIconComponent name="message" size={18} />
                     <Text className="text-sm">Bình luận</Text>
                   </View>
 
                   <View className="flex flex-row gap-2 items-center">
-                    <FontAwesome size={20} name="share" />
+                    <TablerIconComponent name="share-3" size={18} />
                     <Text className="text-sm">Chia sẻ</Text>
                   </View>
                 </View>

@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import "../../global.css";
+import TablerIconComponent from "@/components/icon";
 
 export default function Shop() {
   return (
@@ -21,19 +22,24 @@ export default function Shop() {
         className="bg-white"
       >
         <View className="flex-1 flex-col gap-10 px-10 -mx-8">
-          <View className="flex-row justify-between items-center bg-gray-500 rounded-3xl px-4 py-4">
+          <View className="flex-row justify-between items-center bg-gray-200 rounded-3xl px-4 py-4">
             <View className="flex-1 flex-row items-center gap-2">
-              <FontAwesome size={28} name="user" />
+              <TablerIconComponent name="user" size={24} />
 
               <TextInput
-                className="flex-1 mx-1 text-white text-base"
+                className="flex-1 mx-1 text-base"
                 placeholder="Bạn muốn tìm gì?"
-                placeholderTextColor={"white"}
+                placeholderTextColor={"gray"}
+                style={{
+                  textAlignVertical: "center",
+                  paddingVertical: 0,
+                  height: 24, // Match the icon height
+                }}
               />
             </View>
 
             <TouchableOpacity className="flex-row items-center mr-1">
-              <Ionicons name="search-sharp" size={24} color="white" />
+              <Ionicons name="search-sharp" size={24} color="gray" />
             </TouchableOpacity>
           </View>
 

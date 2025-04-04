@@ -9,9 +9,7 @@ export default function Notification() {
         alignItems: "center",
       }}
     >
-      <Text className="text-blue-500">
-        Edit app/index.tsx to edit this screen.
-      </Text>
+      <Text className="text-blue-500">Work in progress...</Text>
     </View>
   );
 }
