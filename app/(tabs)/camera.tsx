@@ -254,9 +254,21 @@ export default function CameraScreen() {
   };
 
   const saveMaskImage = async () => {
-    if (!maskImageUri) return;
+    if (!maskImageUri) return false;
 
     try {
+      // Request media library permissions explicitly before saving
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (status !== "granted") {
+        Alert.alert(
+          "Permission denied",
+          "Cannot save mask image without media library permission",
+        );
+        return false;
+      }
+
       const asset = await MediaLibrary.createAssetAsync(maskImageUri);
       await MediaLibrary.createAlbumAsync("ShrimpAnalysis", asset, false);
       return true;
@@ -272,6 +284,18 @@ export default function CameraScreen() {
 
     try {
       setIsSaving(true);
+
+      // Request media library permissions explicitly before saving
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (status !== "granted") {
+        Alert.alert(
+          "Permission denied",
+          "Cannot save images without media library permission",
+        );
+        return;
+      }
 
       // First save the mask image
       const maskSaved = await saveMaskImage();
