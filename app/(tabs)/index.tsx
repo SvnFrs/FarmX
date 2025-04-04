@@ -38,7 +38,7 @@ export default function Index() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
+    <SafeAreaView className="flex-1 bg-white mb-28" edges={["top"]}>
       <StatusBar barStyle="dark-content" />
       <ScrollView
         contentContainerStyle={{ flexGrow: 1 }}

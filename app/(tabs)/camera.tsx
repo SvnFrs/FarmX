@@ -23,6 +23,7 @@ import * as ImagePicker from "expo-image-picker";
 import ViewShot from "react-native-view-shot";
 import "../../global.css";
 import TablerIconComponent from "@/components/icon";
+import ScreenWithTabBar from "@/components/layout/ScreenWithTabBar";
 
 const windowHeight = Dimensions.get("window").height;
 
@@ -85,7 +86,7 @@ export default function CameraScreen() {
   }, [analysisResult]);
 
   // Get the actual layout of the displayed image for scanning animation
-  const onImageLayout = (event) => {
+  const onImageLayout = (event: any) => {
     const { x, y, width, height } = event.nativeEvent.layout;
     setImageLayout({ x, y, width, height });
   };
@@ -318,189 +319,195 @@ export default function CameraScreen() {
 
   if (!permission || !mediaLibraryPermission) {
     return (
-      <SafeAreaView className="flex-1 justify-center items-center bg-white">
-        <Text>Requesting camera permissions...</Text>
-      </SafeAreaView>
+      <ScreenWithTabBar>
+        <SafeAreaView className="flex-1 justify-center items-center bg-white">
+          <Text>Requesting camera permissions...</Text>
+        </SafeAreaView>
+      </ScreenWithTabBar>
     );
   }
 
   if (!permission.granted || !mediaLibraryPermission.granted) {
     return (
-      <SafeAreaView className="flex-1 justify-center items-center bg-white">
-        <Text className="text-red-500">
-          No access to camera or media library
-        </Text>
-        <TouchableOpacity
-          className="mt-4 bg-blue-500 py-3 px-6 rounded-full"
-          onPress={() => {
-            if (!permission.granted) requestPermission();
-            if (!mediaLibraryPermission.granted)
-              requestMediaLibraryPermission();
-          }}
-        >
-          <Text className="text-white font-bold">Grant Permission</Text>
-        </TouchableOpacity>
-      </SafeAreaView>
+      <ScreenWithTabBar>
+        <SafeAreaView className="flex-1 justify-center items-center bg-white">
+          <Text className="text-red-500">
+            No access to camera or media library
+          </Text>
+          <TouchableOpacity
+            className="mt-4 bg-blue-500 py-3 px-6 rounded-full"
+            onPress={() => {
+              if (!permission.granted) requestPermission();
+              if (!mediaLibraryPermission.granted)
+                requestMediaLibraryPermission();
+            }}
+          >
+            <Text className="text-white font-bold">Grant Permission</Text>
+          </TouchableOpacity>
+        </SafeAreaView>
+      </ScreenWithTabBar>
     );
   }
 
   if (capturedImage) {
     return (
-      <SafeAreaView className="flex-1">
-        <ViewShot
-          ref={viewShotRef}
-          options={{ format: "jpg", quality: 0.9 }}
-          style={{ flex: 1 }}
-        >
-          <View className="flex-1 justify-center">
-            {/* Original image */}
-            <Image
-              source={{ uri: capturedImage }}
-              className="w-full h-full"
-              resizeMode="contain"
-              onLayout={onImageLayout}
-            />
-
-            {/* Mask image overlay - only shown when showResultModal is true */}
-            {showResultModal && maskImageUri && (
+      <ScreenWithTabBar>
+        <SafeAreaView className="flex-1">
+          <ViewShot
+            ref={viewShotRef}
+            options={{ format: "jpg", quality: 0.9 }}
+            style={{ flex: 1 }}
+          >
+            <View className="flex-1 justify-center">
+              {/* Original image */}
               <Image
-                source={{ uri: maskImageUri }}
-                style={[
-                  StyleSheet.absoluteFill,
-                  { opacity: 0.6, width: "100%", height: "100%" },
-                ]}
+                source={{ uri: capturedImage }}
+                className="w-full h-full"
                 resizeMode="contain"
+                onLayout={onImageLayout}
               />
-            )}
 
-            {/* Scanning line effect - only shown during loading */}
-            {isLoading && imageLayout.height > 0 && (
-              <>
-                {/* Semi-transparent overlay to indicate processing */}
-                <View
+              {/* Mask image overlay - only shown when showResultModal is true */}
+              {showResultModal && maskImageUri && (
+                <Image
+                  source={{ uri: maskImageUri }}
                   style={[
                     StyleSheet.absoluteFill,
-                    { backgroundColor: "rgba(0,0,0,0.2)" },
+                    { opacity: 0.6, width: "100%", height: "100%" },
                   ]}
+                  resizeMode="contain"
                 />
+              )}
 
-                {/* Animated scanning line contained within the image boundaries */}
-                <Animated.View
-                  style={[
-                    styles.scanLine,
-                    {
-                      position: "absolute",
-                      width: imageLayout.width,
-                      left: imageLayout.x,
-                      transform: [
-                        {
-                          translateY: scanLinePosition.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [
-                              imageLayout.y, // Top of the image
-                              imageLayout.y + imageLayout.height - 2, // Bottom of the image (minus line height)
-                            ],
-                          }),
-                        },
-                      ],
-                    },
-                  ]}
-                />
+              {/* Scanning line effect - only shown during loading */}
+              {isLoading && imageLayout.height > 0 && (
+                <>
+                  {/* Semi-transparent overlay to indicate processing */}
+                  <View
+                    style={[
+                      StyleSheet.absoluteFill,
+                      { backgroundColor: "rgba(0,0,0,0.2)" },
+                    ]}
+                  />
 
-                {/* Loading text overlay */}
-                <View style={styles.loadingTextContainer}>
-                  <Text style={styles.loadingText}>Analyzing image...</Text>
+                  {/* Animated scanning line contained within the image boundaries */}
+                  <Animated.View
+                    style={[
+                      styles.scanLine,
+                      {
+                        position: "absolute",
+                        width: imageLayout.width,
+                        left: imageLayout.x,
+                        transform: [
+                          {
+                            translateY: scanLinePosition.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [
+                                imageLayout.y, // Top of the image
+                                imageLayout.y + imageLayout.height - 2, // Bottom of the image (minus line height)
+                              ],
+                            }),
+                          },
+                        ],
+                      },
+                    ]}
+                  />
+
+                  {/* Loading text overlay */}
+                  <View style={styles.loadingTextContainer}>
+                    <Text style={styles.loadingText}>Analyzing image...</Text>
+                  </View>
+                </>
+              )}
+            </View>
+
+            {/* Analysis Results information panel */}
+            {showResultModal && (
+              <View className="absolute top-10 left-0 right-0 bg-black/60 p-4 mx-4 rounded-lg">
+                <TouchableOpacity
+                  className="absolute top-2 right-2"
+                  onPress={closeResultModal}
+                >
+                  <TablerIconComponent
+                    name="x"
+                    size={24}
+                    color="white"
+                    strokeWidth={2}
+                  />
+                </TouchableOpacity>
+
+                <Text className="text-white text-xl font-bold mb-2">
+                  Analysis Results
+                </Text>
+                <View className="flex-row justify-between">
+                  <Text className="text-white text-lg">
+                    Meat Ratio: {analysisResult?.ratio_thit.toFixed(2) || 0}
+                  </Text>
+                  <Text className="text-white text-lg">
+                    Gut: {analysisResult?.ratio_ruot.toFixed(2) || 0}
+                  </Text>
                 </View>
-              </>
+              </View>
+            )}
+          </ViewShot>
+
+          <View className="absolute bottom-10 w-full flex-row justify-evenly">
+            <TouchableOpacity
+              className="bg-white/70 p-4 rounded-full"
+              onPress={retakePhoto}
+              disabled={isLoading || isSaving}
+            >
+              <TablerIconComponent
+                name="arrow-left"
+                size={28}
+                color={isLoading || isSaving ? "gray" : "black"}
+                strokeWidth={2}
+              />
+            </TouchableOpacity>
+
+            {showResultModal ? (
+              <TouchableOpacity
+                className="bg-saltpan-400/90 p-4 rounded-full"
+                onPress={saveImages}
+                disabled={isSaving}
+              >
+                {isSaving ? (
+                  <ActivityIndicator size="small" color="white" />
+                ) : (
+                  <TablerIconComponent
+                    name="device-floppy"
+                    size={28}
+                    color="white"
+                    strokeWidth={2}
+                  />
+                )}
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                className="bg-saltpan-400/90 p-4 rounded-full"
+                onPress={analyzeShrimpImage}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <ActivityIndicator size="small" color="white" />
+                ) : (
+                  <TablerIconComponent
+                    name="check"
+                    size={28}
+                    color="white"
+                    strokeWidth={2}
+                  />
+                )}
+              </TouchableOpacity>
             )}
           </View>
-
-          {/* Analysis Results information panel */}
-          {showResultModal && (
-            <View className="absolute top-10 left-0 right-0 bg-black/60 p-4 mx-4 rounded-lg">
-              <TouchableOpacity
-                className="absolute top-2 right-2"
-                onPress={closeResultModal}
-              >
-                <TablerIconComponent
-                  name="x"
-                  size={24}
-                  color="white"
-                  strokeWidth={2}
-                />
-              </TouchableOpacity>
-
-              <Text className="text-white text-xl font-bold mb-2">
-                Analysis Results
-              </Text>
-              <View className="flex-row justify-between">
-                <Text className="text-white text-lg">
-                  Meat Ratio: {analysisResult?.ratio_thit.toFixed(2) || 0}
-                </Text>
-                <Text className="text-white text-lg">
-                  Gut: {analysisResult?.ratio_ruot.toFixed(2) || 0}
-                </Text>
-              </View>
-            </View>
-          )}
-        </ViewShot>
-
-        <View className="absolute bottom-10 w-full flex-row justify-evenly">
-          <TouchableOpacity
-            className="bg-white/70 p-4 rounded-full"
-            onPress={retakePhoto}
-            disabled={isLoading || isSaving}
-          >
-            <TablerIconComponent
-              name="arrow-left"
-              size={28}
-              color={isLoading || isSaving ? "gray" : "black"}
-              strokeWidth={2}
-            />
-          </TouchableOpacity>
-
-          {showResultModal ? (
-            <TouchableOpacity
-              className="bg-saltpan-400/90 p-4 rounded-full"
-              onPress={saveImages}
-              disabled={isSaving}
-            >
-              {isSaving ? (
-                <ActivityIndicator size="small" color="white" />
-              ) : (
-                <TablerIconComponent
-                  name="device-floppy"
-                  size={28}
-                  color="white"
-                  strokeWidth={2}
-                />
-              )}
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity
-              className="bg-saltpan-400/90 p-4 rounded-full"
-              onPress={analyzeShrimpImage}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <ActivityIndicator size="small" color="white" />
-              ) : (
-                <TablerIconComponent
-                  name="check"
-                  size={28}
-                  color="white"
-                  strokeWidth={2}
-                />
-              )}
-            </TouchableOpacity>
-          )}
-        </View>
-      </SafeAreaView>
+        </SafeAreaView>
+      </ScreenWithTabBar>
     );
   }
 
   return (
-    <View className="flex-1">
+    <ScreenWithTabBar style={{ paddingBottom: 0 }}>
       <StatusBar hidden={true} />
       <CameraView
         ref={cameraRef}
@@ -533,7 +540,7 @@ export default function CameraScreen() {
           </View>
 
           {/* Shrimp detection guide overlay */}
-          <View className="flex-1 justify-center items-center">
+          <View className="flex-1 top-32 items-center">
             <View className="border-2 border-sky-400 border-dotted rounded-lg w-4/5 h-2/5 opacity-70">
               <View className="absolute -top-8 w-full">
                 <Text className="text-white text-center bg-black/50 p-1 rounded">
@@ -546,7 +553,7 @@ export default function CameraScreen() {
       </CameraView>
 
       {/* Bottom button row with camera and gallery buttons */}
-      <View className="absolute bottom-16 left-0 right-0 flex-row justify-between items-center space-x-6 px-5">
+      <View className="absolute bottom-40 left-0 right-0 flex-row justify-between items-center space-x-6 px-5">
         {/* Gallery button */}
         <TouchableOpacity
           className="bg-white h-14 w-14 rounded-full flex items-center justify-center shadow-lg border border-gray-300"
@@ -582,7 +589,7 @@ export default function CameraScreen() {
           onPress={pickImage}
         ></TouchableOpacity>
       </View>
-    </View>
+    </ScreenWithTabBar>
   );
 }
 
