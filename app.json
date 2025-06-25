@@ -9,7 +9,11 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "App needs access to the camera to analyze shrimp images",
+        "NSPhotoLibraryUsageDescription": "App needs access to your photo library to pick and save images"
+      }
     },
     "android": {
       "adaptiveIcon": {

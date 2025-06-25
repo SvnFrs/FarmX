@@ -7,15 +7,10 @@ import {
   Alert,
   StyleSheet,
   StatusBar,
-  Modal,
   ActivityIndicator,
-  Dimensions,
-  Animated,
-  Easing,
 } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { SafeAreaView } from "react-native-safe-area-context";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as MediaLibrary from "expo-media-library";
 import * as FileSystem from "expo-file-system";
@@ -24,10 +19,27 @@ import ViewShot from "react-native-view-shot";
 import "../../global.css";
 import TablerIconComponent from "@/components/icon";
 import ScreenWithTabBar from "@/components/layout/ScreenWithTabBar";
+import { useFocusEffect } from "@react-navigation/native";
 
-const windowHeight = Dimensions.get("window").height;
+// Enhanced logging utility
+const logger = {
+  log: (message: string, data?: any) => {
+    const timestamp = new Date().toISOString();
+    console.log(`[CAMERA-${timestamp}] ${message}`, data || "");
+  },
+  error: (message: string, error?: any) => {
+    const timestamp = new Date().toISOString();
+    console.error(`[CAMERA-ERROR-${timestamp}] ${message}`, error || "");
+  },
+  warn: (message: string, data?: any) => {
+    const timestamp = new Date().toISOString();
+    console.warn(`[CAMERA-WARN-${timestamp}] ${message}`, data || "");
+  },
+};
 
 export default function CameraScreen() {
+  logger.log("🚀 CameraScreen component initializing");
+
   const [permission, requestPermission] = useCameraPermissions();
   const [mediaLibraryPermission, requestMediaLibraryPermission] =
     MediaLibrary.usePermissions();
@@ -52,115 +64,200 @@ export default function CameraScreen() {
     y: 0,
   });
 
-  // Animated value for the scanning effect
-  const scanLinePosition = useRef(new Animated.Value(0)).current;
-  const scanningAnimation = useRef<Animated.CompositeAnimation | null>(null);
+  // Fix for camera crash - delayed rendering
+  const [cameraPermissionGrantedDelayed, setCameraPermissionGrantedDelayed] =
+    useState(false);
+  const [isScreenFocused, setIsScreenFocused] = useState(false);
+  const [isCameraReady, setIsCameraReady] = useState(false);
+
+  // Handle screen focus to properly manage camera lifecycle
+  useFocusEffect(
+    React.useCallback(() => {
+      logger.log("🎯 Screen focused - setting up camera");
+      setIsScreenFocused(true);
+
+      return () => {
+        logger.log("👋 Screen unfocused - cleaning up camera");
+        setIsScreenFocused(false);
+        setCameraPermissionGrantedDelayed(false);
+        setIsCameraReady(false);
+
+        // Safe camera ref cleanup
+        if (cameraRef.current) {
+          logger.log("🧹 Cleaning up camera ref");
+          try {
+            cameraRef.current = null;
+          } catch (error) {
+            logger.error("Error cleaning up camera ref", error);
+          }
+        }
+      };
+    }, []),
+  );
 
   useEffect(() => {
+    logger.log("🔐 Checking permissions", {
+      cameraPermission: permission?.granted,
+      mediaPermission: mediaLibraryPermission?.granted,
+    });
+
     if (!permission) {
+      logger.log("📸 Requesting camera permission");
       requestPermission();
     }
     if (!mediaLibraryPermission) {
+      logger.log("📁 Requesting media library permission");
       requestMediaLibraryPermission();
     }
   }, []);
 
-  // Start scanning animation when loading begins, stop when it ends
+  // Delayed camera permission to prevent crashes
   useEffect(() => {
-    if (isLoading) {
-      startScanningAnimation();
-    } else {
-      stopScanningAnimation();
-    }
+    logger.log("⏱️ Camera permission delay effect", {
+      permissionGranted: permission?.granted,
+      isScreenFocused,
+      currentDelayedState: cameraPermissionGrantedDelayed,
+    });
 
-    return () => {
-      stopScanningAnimation();
-    };
-  }, [isLoading]);
+    if (permission?.granted && isScreenFocused) {
+      logger.log("⏳ Starting camera permission delay timer (1000ms)");
+
+      const timer = setTimeout(() => {
+        logger.log("✅ Camera permission delay completed - enabling camera");
+        setCameraPermissionGrantedDelayed(true);
+      }, 1000);
+
+      return () => {
+        logger.log("🚫 Clearing camera permission delay timer");
+        clearTimeout(timer);
+      };
+    } else {
+      if (cameraPermissionGrantedDelayed) {
+        logger.log("❌ Disabling delayed camera permission");
+        setCameraPermissionGrantedDelayed(false);
+      }
+    }
+  }, [permission?.granted, isScreenFocused]);
 
   // Convert base64 to local image URI when analysis result is set
   useEffect(() => {
     if (analysisResult?.mask) {
+      logger.log("🖼️ Creating local image from base64 mask");
       createLocalImageFromBase64(analysisResult.mask);
     }
   }, [analysisResult]);
 
-  // Get the actual layout of the displayed image for scanning animation
+  // Cleanup when component unmounts
+  useEffect(() => {
+    return () => {
+      logger.log("🏁 Component unmounting - final cleanup");
+      setIsLoading(false);
+      setIsSaving(false);
+      setIsCameraReady(false);
+    };
+  }, []);
+
+  // Camera lifecycle handlers
+  const handleCameraReady = () => {
+    logger.log("📹 Camera ready callback triggered");
+    setIsCameraReady(true);
+  };
+
+  const handleCameraError = (error: any) => {
+    logger.error("💥 Camera mount error", error);
+    setIsCameraReady(false);
+  };
+
+  // Get the actual layout of the displayed image
   const onImageLayout = (event: any) => {
     const { x, y, width, height } = event.nativeEvent.layout;
+    logger.log("📐 Image layout updated", { x, y, width, height });
     setImageLayout({ x, y, width, height });
   };
 
-  // Animation function to create the scanning effect that starts from top and moves downward
-  const startScanningAnimation = () => {
-    // Reset the animation value
-    scanLinePosition.setValue(0);
+  // Function to determine health status based on muscle to gut ratio
+  const getHealthStatus = (muscleRatio: number, gutRatio: number) => {
+    const muscleToGutRatio = muscleRatio / gutRatio;
+    logger.log("💪 Calculating health status", {
+      muscleRatio,
+      gutRatio,
+      ratio: muscleToGutRatio,
+    });
 
-    // Create the animation sequence that properly scans down and up
-    scanningAnimation.current = Animated.loop(
-      Animated.sequence([
-        // Move the line from top to bottom
-        Animated.timing(scanLinePosition, {
-          toValue: 1,
-          duration: 2000,
-          easing: Easing.linear,
-          useNativeDriver: true,
-        }),
-        // Small pause at the bottom
-        Animated.delay(100),
-        // Move the line from bottom to top
-        Animated.timing(scanLinePosition, {
-          toValue: 0,
-          duration: 2000,
-          easing: Easing.linear,
-          useNativeDriver: true,
-        }),
-        // Small pause at the top
-        Animated.delay(100),
-      ]),
-    );
-
-    // Start the animation
-    scanningAnimation.current.start();
-  };
-
-  const stopScanningAnimation = () => {
-    if (scanningAnimation.current) {
-      scanningAnimation.current.stop();
-      scanningAnimation.current = null;
+    if (muscleToGutRatio >= 3.5) {
+      return {
+        status: "Healthy",
+        color: "#22c55e",
+        bgColor: "rgba(34, 197, 94, 0.1)",
+      };
+    } else if (muscleToGutRatio >= 2.5) {
+      return {
+        status: "Needs Attention",
+        color: "#f59e0b",
+        bgColor: "rgba(245, 158, 11, 0.1)",
+      };
+    } else {
+      return {
+        status: "Unhealthy",
+        color: "#ef4444",
+        bgColor: "rgba(239, 68, 68, 0.1)",
+      };
     }
   };
 
   const createLocalImageFromBase64 = async (base64: string) => {
     try {
+      logger.log("💾 Creating local image from base64");
       const fileUri = FileSystem.cacheDirectory + "mask_image.png";
       await FileSystem.writeAsStringAsync(fileUri, base64, {
         encoding: FileSystem.EncodingType.Base64,
       });
+      logger.log("✅ Local image created successfully", fileUri);
       setMaskImageUri(fileUri);
     } catch (error) {
-      console.error("Error creating local image:", error);
+      logger.error("Failed to create local image", error);
     }
   };
 
   const takePicture = async () => {
-    if (cameraRef.current) {
-      try {
-        const photo = await cameraRef.current.takePictureAsync({
-          quality: 1,
-          exif: true,
-        });
-        setCapturedImage(photo.uri);
-      } catch (error) {
-        console.error("Error taking picture:", error);
-        Alert.alert("Error", "Failed to take picture");
-      }
+    logger.log("📸 Take picture requested", {
+      cameraRefExists: !!cameraRef.current,
+      isLoading,
+      isCameraReady,
+    });
+
+    if (!cameraRef.current) {
+      logger.error("Camera ref is null when trying to take picture");
+      return;
+    }
+
+    if (!isCameraReady) {
+      logger.warn("Camera not ready when trying to take picture");
+      return;
+    }
+
+    if (isLoading) {
+      logger.warn("Already loading when trying to take picture");
+      return;
+    }
+
+    try {
+      logger.log("📷 Taking picture...");
+      const photo = await cameraRef.current.takePictureAsync({
+        quality: 1,
+        exif: true,
+      });
+      logger.log("✅ Picture taken successfully", photo.uri);
+      setCapturedImage(photo.uri);
+    } catch (error) {
+      logger.error("Failed to take picture", error);
+      Alert.alert("Error", "Failed to take picture");
     }
   };
 
   const pickImage = async () => {
     try {
-      // No permissions request is necessary for launching the image library
+      logger.log("🖼️ Picking image from gallery");
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
@@ -169,45 +266,82 @@ export default function CameraScreen() {
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
+        logger.log("✅ Image picked successfully", result.assets[0].uri);
         setCapturedImage(result.assets[0].uri);
+      } else {
+        logger.log("❌ Image picking cancelled");
       }
     } catch (error) {
-      console.error("Error picking image:", error);
+      logger.error("Failed to pick image", error);
       Alert.alert("Error", "Failed to pick image from gallery");
     }
   };
 
   const handleFlipCamera = () => {
-    setFacing((current) => (current === "back" ? "front" : "back"));
+    logger.log("🔄 Flip camera requested", {
+      currentFacing: facing,
+      isLoading,
+      isSaving,
+      isCameraReady,
+    });
+
+    if (!isLoading && !isSaving && isCameraReady) {
+      const newFacing = facing === "back" ? "front" : "back";
+      logger.log("🔄 Flipping camera", { from: facing, to: newFacing });
+      setFacing(newFacing);
+    } else {
+      logger.warn("Cannot flip camera - conditions not met", {
+        isLoading,
+        isSaving,
+        isCameraReady,
+      });
+    }
   };
 
   const toggleFlash = () => {
-    setFlash((current) => (current === "off" ? "on" : "off"));
+    logger.log("⚡ Toggle flash requested", {
+      currentFlash: flash,
+      isLoading,
+      isSaving,
+      isCameraReady,
+    });
+
+    if (!isLoading && !isSaving && isCameraReady) {
+      const newFlash = flash === "off" ? "on" : "off";
+      logger.log("⚡ Toggling flash", { from: flash, to: newFlash });
+      setFlash(newFlash);
+    } else {
+      logger.warn("Cannot toggle flash - conditions not met", {
+        isLoading,
+        isSaving,
+        isCameraReady,
+      });
+    }
   };
 
   const uploadImageForAnalysis = async (imageUri: string) => {
+    logger.log("🚀 Starting image analysis", imageUri);
+
     try {
       setIsLoading(true);
+      logger.log("⏳ Set loading state to true");
 
-      // Read the image and convert to base64
       const response = await fetch(imageUri);
       const blob = await response.blob();
+      logger.log("📦 Image converted to blob");
 
-      // Convert blob to base64
       const base64 = await new Promise((resolve) => {
         const reader = new FileReader();
         reader.readAsDataURL(blob);
         reader.onloadend = () => {
           const base64data = reader.result as string;
-          // Remove the data:image/jpeg;base64, prefix
           resolve(base64data.split(",")[1]);
         };
       });
+      logger.log("🔤 Image converted to base64");
 
-      console.log("Sending request to backend...");
-
-      // Send to your API with the expected JSON format
-      const apiResponse = await fetch("http://192.168.1.6:8081/predict", {
+      logger.log("📡 Sending request to backend...");
+      const apiResponse = await fetch("https://contom.newlysight.com/predict", {
         method: "POST",
         headers: {
           Accept: "application/json",
@@ -218,19 +352,23 @@ export default function CameraScreen() {
         }),
       });
 
-      console.log("Response status:", apiResponse.status);
+      logger.log("📡 Backend response received", {
+        status: apiResponse.status,
+      });
 
-      // Handle the response
       if (apiResponse.ok) {
         const result = await apiResponse.json();
-        console.log("Response data:", JSON.stringify(result));
+        logger.log("✅ Analysis successful", result);
 
-        // Store the result and show the modal
         setAnalysisResult(result);
         setShowResultModal(true);
+        logger.log("📊 Analysis result set and modal shown");
       } else {
         const errorText = await apiResponse.text();
-        console.error("Error response:", errorText);
+        logger.error("❌ Backend error response", {
+          status: apiResponse.status,
+          error: errorText,
+        });
 
         try {
           const errorData = JSON.parse(errorText);
@@ -243,25 +381,30 @@ export default function CameraScreen() {
         }
       }
     } catch (error) {
-      console.error("Upload error:", error);
+      logger.error("💥 Analysis failed", error);
       Alert.alert(
         "Error",
         `Failed to connect to analysis server: ${error instanceof Error ? error.message : String(error)}`,
       );
     } finally {
+      logger.log("🏁 Analysis finished, setting loading to false");
       setIsLoading(false);
     }
   };
 
   const saveMaskImage = async () => {
-    if (!maskImageUri) return false;
+    if (!maskImageUri) {
+      logger.warn("No mask image URI to save");
+      return false;
+    }
 
     try {
-      // Request media library permissions explicitly before saving
+      logger.log("💾 Saving mask image", maskImageUri);
       const { status } =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
 
       if (status !== "granted") {
+        logger.error("Media library permission denied");
         Alert.alert(
           "Permission denied",
           "Cannot save mask image without media library permission",
@@ -271,25 +414,32 @@ export default function CameraScreen() {
 
       const asset = await MediaLibrary.createAssetAsync(maskImageUri);
       await MediaLibrary.createAlbumAsync("ShrimpAnalysis", asset, false);
+      logger.log("✅ Mask image saved successfully");
       return true;
     } catch (error) {
-      console.error("Error saving mask image:", error);
+      logger.error("Failed to save mask image", error);
       return false;
     }
   };
 
-  // Function to save both the mask image and the composite overlay
   const saveImages = async () => {
-    if (!maskImageUri || !capturedImage) return;
+    if (!maskImageUri || !capturedImage) {
+      logger.warn("Missing images to save", {
+        maskImageUri: !!maskImageUri,
+        capturedImage: !!capturedImage,
+      });
+      return;
+    }
 
     try {
+      logger.log("💾 Starting image save process");
       setIsSaving(true);
 
-      // Request media library permissions explicitly before saving
       const { status } =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
 
       if (status !== "granted") {
+        logger.error("Media library permission denied for saving");
         Alert.alert(
           "Permission denied",
           "Cannot save images without media library permission",
@@ -297,20 +447,22 @@ export default function CameraScreen() {
         return;
       }
 
-      // First save the mask image
       const maskSaved = await saveMaskImage();
+      logger.log("💾 Mask save result", maskSaved);
 
-      // Then capture and save the composite view
       if (viewShotRef.current) {
+        logger.log("📸 Capturing composite view");
         const uri = await viewShotRef.current.capture();
         const asset = await MediaLibrary.createAssetAsync(uri);
         await MediaLibrary.createAlbumAsync("ShrimpAnalysis", asset, false);
 
+        logger.log("✅ All images saved successfully");
         Alert.alert(
           "Success",
           `${maskSaved ? "Mask image and overlay" : "Overlay"} saved to your gallery`,
         );
       } else {
+        logger.error("ViewShot ref is null");
         if (maskSaved) {
           Alert.alert("Partial Success", "Only mask image was saved");
         } else {
@@ -318,62 +470,132 @@ export default function CameraScreen() {
         }
       }
     } catch (error) {
-      console.error("Error saving images:", error);
+      logger.error("Failed to save images", error);
       Alert.alert("Error", "Failed to save images");
     } finally {
+      logger.log("🏁 Image save process finished");
       setIsSaving(false);
     }
   };
 
   const analyzeShrimpImage = () => {
-    if (!capturedImage) return;
+    logger.log("🔬 Analyze shrimp requested", {
+      capturedImage: !!capturedImage,
+      isLoading,
+    });
+
+    if (!capturedImage || isLoading) {
+      logger.warn("Cannot analyze - missing image or already loading", {
+        capturedImage: !!capturedImage,
+        isLoading,
+      });
+      return;
+    }
+
     uploadImageForAnalysis(capturedImage);
   };
 
   const retakePhoto = () => {
-    setCapturedImage(null);
-    setAnalysisResult(null);
-    setMaskImageUri(null);
-    setShowResultModal(false);
+    logger.log("🔄 Retake photo requested", {
+      isLoading,
+      isSaving,
+      capturedImage: !!capturedImage,
+      showResultModal,
+    });
+
+    if (isLoading || isSaving) {
+      logger.warn("Cannot retake - still loading or saving");
+      return;
+    }
+
+    try {
+      logger.log("🧹 Resetting all photo states");
+      setCapturedImage(null);
+      setAnalysisResult(null);
+      setMaskImageUri(null);
+      setShowResultModal(false);
+      logger.log("✅ Photo states reset successfully");
+    } catch (error) {
+      logger.error("Error in retakePhoto", error);
+    }
   };
 
   const closeResultModal = () => {
-    setShowResultModal(false);
+    logger.log("❌ Close result modal requested", { isSaving });
+
+    if (!isSaving) {
+      logger.log("✅ Closing result modal");
+      setShowResultModal(false);
+    } else {
+      logger.warn("Cannot close modal - still saving");
+    }
   };
 
+  // Permission checking
   if (!permission || !mediaLibraryPermission) {
+    logger.log("⏳ Waiting for permissions to load");
     return (
       <ScreenWithTabBar>
         <SafeAreaView className="flex-1 justify-center items-center bg-white">
-          <Text>Requesting camera permissions...</Text>
+          <ActivityIndicator size="large" color="#0000ff" />
+          <Text className="mt-4">Requesting permissions...</Text>
         </SafeAreaView>
       </ScreenWithTabBar>
     );
   }
 
   if (!permission.granted || !mediaLibraryPermission.granted) {
+    logger.warn("❌ Permissions not granted", {
+      camera: permission.granted,
+      mediaLibrary: mediaLibraryPermission.granted,
+    });
+
     return (
       <ScreenWithTabBar>
         <SafeAreaView className="flex-1 justify-center items-center bg-white">
-          <Text className="text-red-500">
-            No access to camera or media library
+          <Text className="text-red-500 mb-4 text-center px-4">
+            Camera and media library access required for this feature
           </Text>
           <TouchableOpacity
             className="mt-4 bg-blue-500 py-3 px-6 rounded-full"
             onPress={() => {
+              logger.log("🔐 Requesting permissions manually");
               if (!permission.granted) requestPermission();
               if (!mediaLibraryPermission.granted)
                 requestMediaLibraryPermission();
             }}
           >
-            <Text className="text-white font-bold">Grant Permission</Text>
+            <Text className="text-white font-bold">Grant Permissions</Text>
           </TouchableOpacity>
         </SafeAreaView>
       </ScreenWithTabBar>
     );
   }
 
+  // Show loading while waiting for delayed camera permission
+  if (!cameraPermissionGrantedDelayed) {
+    logger.log("⏳ Waiting for delayed camera permission");
+    return (
+      <ScreenWithTabBar>
+        <SafeAreaView className="flex-1 justify-center items-center bg-black">
+          <ActivityIndicator size="large" color="#ffffff" />
+          <Text className="text-white mt-4">Initializing camera...</Text>
+        </SafeAreaView>
+      </ScreenWithTabBar>
+    );
+  }
+
   if (capturedImage) {
+    logger.log("🖼️ Rendering captured image view", {
+      showResultModal,
+      hasAnalysisResult: !!analysisResult,
+      hasMaskImage: !!maskImageUri,
+    });
+
+    const healthStatus = analysisResult
+      ? getHealthStatus(analysisResult.ratio_thit, analysisResult.ratio_ruot)
+      : null;
+
     return (
       <ScreenWithTabBar>
         <SafeAreaView className="flex-1">
@@ -403,73 +625,83 @@ export default function CameraScreen() {
                 />
               )}
 
-              {/* Scanning line effect - only shown during loading */}
-              {isLoading && imageLayout.height > 0 && (
-                <>
-                  {/* Semi-transparent overlay to indicate processing */}
-                  <View
-                    style={[
-                      StyleSheet.absoluteFill,
-                      { backgroundColor: "rgba(0,0,0,0.2)" },
-                    ]}
-                  />
-
-                  {/* Animated scanning line contained within the image boundaries */}
-                  <Animated.View
-                    style={[
-                      styles.scanLine,
-                      {
-                        position: "absolute",
-                        width: imageLayout.width,
-                        left: imageLayout.x,
-                        transform: [
-                          {
-                            translateY: scanLinePosition.interpolate({
-                              inputRange: [0, 1],
-                              outputRange: [
-                                imageLayout.y, // Top of the image
-                                imageLayout.y + imageLayout.height - 2, // Bottom of the image (minus line height)
-                              ],
-                            }),
-                          },
-                        ],
-                      },
-                    ]}
-                  />
-
-                  {/* Loading text overlay */}
-                  <View style={styles.loadingTextContainer}>
-                    <Text style={styles.loadingText}>Analyzing image...</Text>
+              {/* Loading overlay - simple version without animation */}
+              {isLoading && (
+                <View style={[StyleSheet.absoluteFill, styles.loadingOverlay]}>
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color="#00bcd4" />
+                    <Text style={styles.loadingText}>Analyzing shrimp...</Text>
                   </View>
-                </>
+                </View>
               )}
             </View>
 
             {/* Analysis Results information panel */}
-            {showResultModal && (
-              <View className="absolute top-10 left-0 right-0 bg-black/60 p-4 mx-4 rounded-lg">
+            {showResultModal && analysisResult && (
+              <View className="absolute top-10 left-0 right-0 bg-black/80 p-4 mx-4 rounded-lg">
                 <TouchableOpacity
                   className="absolute top-2 right-2"
                   onPress={closeResultModal}
+                  disabled={isSaving}
                 >
                   <TablerIconComponent
                     name="x"
                     size={24}
-                    color="white"
+                    color={isSaving ? "gray" : "white"}
                     strokeWidth={2}
                   />
                 </TouchableOpacity>
 
-                <Text className="text-white text-xl font-bold mb-2">
-                  Analysis Results
+                <Text className="text-white text-xl font-bold mb-3">
+                  Muscle-to-Gut Analysis
                 </Text>
-                <View className="flex-row justify-between">
-                  <Text className="text-white text-lg">
-                    Meat Ratio: {analysisResult?.ratio_thit.toFixed(2) || 0}
-                  </Text>
-                  <Text className="text-white text-lg">
-                    Gut: {analysisResult?.ratio_ruot.toFixed(2) || 0}
-                  </Text>
+
+                {/* Health Status */}
+                {healthStatus && (
+                  <View
+                    className="mb-3 px-3 py-2 rounded-lg"
+                    style={{ backgroundColor: healthStatus.bgColor }}
+                  >
+                    <Text
+                      className="text-center font-bold text-lg"
+                      style={{ color: healthStatus.color }}
+                    >
+                      Status: {healthStatus.status}
+                    </Text>
+                  </View>
+                )}
+
+                {/* Ratios */}
+                <View className="space-y-2">
+                  <View className="flex-row justify-between">
+                    <Text className="text-white text-base font-medium">
+                      Muscle Ratio:
+                    </Text>
+                    <Text className="text-white text-base">
+                      {(analysisResult.ratio_thit * 100).toFixed(1)}%
+                    </Text>
+                  </View>
+
+                  <View className="flex-row justify-between">
+                    <Text className="text-white text-base font-medium">
+                      Gut Ratio:
+                    </Text>
+                    <Text className="text-white text-base">
+                      {(analysisResult.ratio_ruot * 100).toFixed(1)}%
+                    </Text>
+                  </View>
+
+                  <View className="flex-row justify-between mt-2 pt-2 border-t border-gray-400">
+                    <Text className="text-white text-base font-bold">
+                      Muscle:Gut Ratio:
+                    </Text>
+                    <Text className="text-white text-base font-bold">
+                      {(
+                        analysisResult.ratio_thit / analysisResult.ratio_ruot
+                      ).toFixed(2)}
+                      :1
+                    </Text>
+                  </View>
                 </View>
               </View>
             )}
@@ -530,88 +762,144 @@ export default function CameraScreen() {
     );
   }
 
+  logger.log("📹 Rendering camera view", {
+    cameraPermissionGrantedDelayed,
+    isScreenFocused,
+    isCameraReady,
+  });
+
   return (
     <ScreenWithTabBar style={{ paddingBottom: 0 }}>
       <StatusBar hidden={true} />
-      <CameraView
-        ref={cameraRef}
-        facing={facing}
-        flash={flash}
-        style={styles.camera}
-        ratio="16:9"
-        onCameraReady={() => console.log("Camera ready")}
-        onMountError={(error) => console.error("Camera mount error:", error)}
-      >
-        <View className="flex-1">
-          <View className="flex-row justify-between p-6">
-            <TouchableOpacity
-              className="bg-black/30 p-3 rounded-full"
-              onPress={toggleFlash}
-            >
-              <Ionicons
-                name={flash === "on" ? "flash" : "flash-off"}
-                size={24}
-                color="white"
-              />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              className="bg-black/30 p-3 rounded-full"
-              onPress={handleFlipCamera}
-            >
-              <Ionicons name="camera-reverse" size={24} color="white" />
-            </TouchableOpacity>
+      <View className="flex-1">
+        {/* CameraView without any children */}
+        {cameraPermissionGrantedDelayed && isScreenFocused ? (
+          <CameraView
+            ref={cameraRef}
+            facing={facing}
+            flash={flash}
+            style={styles.camera}
+            ratio="16:9"
+            onCameraReady={handleCameraReady}
+            onMountError={handleCameraError}
+          />
+        ) : (
+          <View className="flex-1 items-center justify-center bg-black">
+            <ActivityIndicator size="large" color="white" />
+            <Text className="text-white mt-4">Loading camera...</Text>
           </View>
+        )}
 
-          {/* Shrimp detection guide overlay */}
-          <View className="flex-1 top-32 items-center">
-            <View className="border-2 border-sky-400 border-dotted rounded-lg w-4/5 h-2/5 opacity-70">
-              <View className="absolute -top-8 w-full">
-                <Text className="text-white text-center bg-black/50 p-1 rounded">
-                  Position shrimp within frame
-                </Text>
+        {/* All UI elements positioned absolutely over the camera */}
+        {cameraPermissionGrantedDelayed && isScreenFocused && (
+          <>
+            {/* Top controls */}
+            <View className="absolute top-0 left-0 right-0 flex-row justify-between p-6 pt-12">
+              <TouchableOpacity
+                className="bg-black/30 p-3 rounded-full"
+                onPress={toggleFlash}
+                disabled={isLoading || isSaving || !isCameraReady}
+              >
+                <Ionicons
+                  name={flash === "on" ? "flash" : "flash-off"}
+                  size={24}
+                  color={
+                    isLoading || isSaving || !isCameraReady ? "gray" : "white"
+                  }
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                className="bg-black/30 p-3 rounded-full"
+                onPress={handleFlipCamera}
+                disabled={isLoading || isSaving || !isCameraReady}
+              >
+                <Ionicons
+                  name="camera-reverse"
+                  size={24}
+                  color={
+                    isLoading || isSaving || !isCameraReady ? "gray" : "white"
+                  }
+                />
+              </TouchableOpacity>
+            </View>
+
+            {/* Shrimp detection guide overlay */}
+            <View className="absolute top-1/4 left-0 right-0 items-center">
+              <View className="border-2 border-sky-400 border-dotted rounded-lg w-4/5 h-64 opacity-70">
+                <View className="absolute -top-8 w-full">
+                  <Text className="text-white text-center bg-black/50 p-1 rounded">
+                    Position shrimp within frame
+                  </Text>
+                </View>
               </View>
             </View>
-          </View>
+
+            {/* Camera status indicator */}
+            {!isCameraReady && (
+              <View className="absolute bottom-1/3 left-1/2 transform -translate-x-1/2">
+                <View className="bg-black/70 p-3 rounded-lg">
+                  <Text className="text-white text-center text-sm">
+                    Camera loading...
+                  </Text>
+                </View>
+              </View>
+            )}
+          </>
+        )}
+
+        {/* Bottom button row - always visible */}
+        <View className="absolute bottom-40 left-0 right-0 flex-row justify-between items-center space-x-6 px-5">
+          {/* Gallery button */}
+          <TouchableOpacity
+            className="bg-white h-14 w-14 rounded-full flex items-center justify-center shadow-lg border border-gray-300"
+            onPress={pickImage}
+            disabled={isLoading || isSaving}
+          >
+            <View className="bg-saltpan-400 h-10 w-10 rounded-full flex items-center justify-center">
+              <TablerIconComponent
+                name="library-photo"
+                size={24}
+                color={isLoading || isSaving ? "gray" : "white"}
+                strokeWidth={2}
+              />
+            </View>
+          </TouchableOpacity>
+
+          {/* Camera button */}
+          <TouchableOpacity
+            className="bg-white h-20 w-20 rounded-full flex items-center justify-center shadow-lg border border-gray-300"
+            onPress={takePicture}
+            disabled={
+              isLoading ||
+              isSaving ||
+              !cameraPermissionGrantedDelayed ||
+              !isCameraReady
+            }
+          >
+            <View className="bg-sky-500 h-16 w-16 rounded-full flex items-center justify-center">
+              <TablerIconComponent
+                name="camera"
+                size={30}
+                color={
+                  isLoading ||
+                  isSaving ||
+                  !cameraPermissionGrantedDelayed ||
+                  !isCameraReady
+                    ? "gray"
+                    : "white"
+                }
+                strokeWidth={2}
+              />
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            className="bg-transparent h-14 w-14 rounded-full flex items-center justify-center shadow-lg"
+            onPress={pickImage}
+            disabled={isLoading || isSaving}
+          ></TouchableOpacity>
         </View>
-      </CameraView>
-
-      {/* Bottom button row with camera and gallery buttons */}
-      <View className="absolute bottom-40 left-0 right-0 flex-row justify-between items-center space-x-6 px-5">
-        {/* Gallery button */}
-        <TouchableOpacity
-          className="bg-white h-14 w-14 rounded-full flex items-center justify-center shadow-lg border border-gray-300"
-          onPress={pickImage}
-        >
-          <View className="bg-saltpan-400 h-10 w-10 rounded-full flex items-center justify-center">
-            <TablerIconComponent
-              name="library-photo"
-              size={24}
-              color="white"
-              strokeWidth={2}
-            />
-          </View>
-        </TouchableOpacity>
-
-        {/* Camera button */}
-        <TouchableOpacity
-          className="bg-white h-20 w-20 rounded-full flex items-center justify-center shadow-lg border border-gray-300"
-          onPress={takePicture}
-        >
-          <View className="bg-sky-500 h-16 w-16 rounded-full flex items-center justify-center">
-            <TablerIconComponent
-              name="camera"
-              size={30}
-              color="white"
-              strokeWidth={2}
-            />
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          className="bg-transparent h-14 w-14 rounded-full flex items-center justify-center shadow-lg"
-          onPress={pickImage}
-        ></TouchableOpacity>
       </View>
     </ScreenWithTabBar>
   );
@@ -623,27 +911,22 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
   },
-  scanLine: {
-    height: 2,
-    backgroundColor: "#00bcd4", // Bright teal color
-    shadowColor: "#00bcd4",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  loadingTextContainer: {
-    position: "absolute",
-    top: 50,
-    alignSelf: "center",
+  loadingOverlay: {
     backgroundColor: "rgba(0,0,0,0.7)",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingContainer: {
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.8)",
+    paddingHorizontal: 30,
+    paddingVertical: 20,
+    borderRadius: 15,
   },
   loadingText: {
     color: "white",
     fontSize: 16,
     fontWeight: "bold",
+    marginTop: 10,
   },
 });
