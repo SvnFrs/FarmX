@@ -21,11 +21,11 @@ export default function NavigationBar({
   const isCameraTab = currentRoute.name === "camera";
 
   // Set background color based on current tab
-  const bgColor = isCameraTab ? "bg-transparent" : "bg-[#E9EFEA]";
+  const bgColor = isCameraTab ? "bg-transparent" : "bg-[#e4f3ff]";
 
   // Optional: slightly darken buttons if transparent for better visibility
   const buttonBgClass = isCameraTab ? "bg-black/30" : "bg-transparent";
-  const focusedButtonClass = isCameraTab ? "bg-[#CEE9DB]" : "bg-[#CEE9DB]";
+  const focusedButtonClass = isCameraTab ? "bg-[#a6d2fd]" : "bg-[#b2dcfe]";
 
   return (
     <View

@@ -24,7 +24,7 @@ export default function TabLayout() {
         <Tabs.Screen
           name="shop"
           options={{
-            title: "Mua hàng",
+            title: "Cửa hàng",
           }}
         />
         <Tabs.Screen
@@ -36,7 +36,7 @@ export default function TabLayout() {
         <Tabs.Screen
           name="manage"
           options={{
-            title: "Vụ nuôi",
+            title: "Quản lý",
           }}
         />
         <Tabs.Screen

@@ -29,11 +29,11 @@ export default function NavigationButton({
   // Adjust icon color based on mode and focus state
   const iconColor = isTransparentMode
     ? isFocused
-      ? "#186B53"
+      ? "#0d4a4f"
       : "#fff"
     : isFocused
-      ? "#186B53"
-      : "#171D1A";
+      ? "#0d4a4f"
+      : "#374151";
 
   // Map route names to icon names
   const getIconName = (route: string) => {
