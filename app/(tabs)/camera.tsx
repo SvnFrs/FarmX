@@ -15,7 +15,7 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as MediaLibrary from "expo-media-library";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import * as ImagePicker from "expo-image-picker";
 import ViewShot from "react-native-view-shot";
 import "../../global.css";
@@ -453,7 +453,9 @@ export default function CameraScreen() {
       setAnalysisProgress(40);
 
       logger.log("📡 Sending request to backend...");
-      const apiResponse = await fetch("https://contom.newlysight.com/predict", {
+      // const apiResponse = await fetch("https://contom.newlysight.com/predict", {
+
+      const apiResponse = await fetch("https://192.168.1.52:8081/predict", {
         method: "POST",
         headers: {
           Accept: "application/json",
@@ -788,11 +790,11 @@ export default function CameraScreen() {
                 </Animated.View>
               )}
 
-              {/* Enhanced loading overlay */}
+              {/* Enhanced loading overlay with better visuals */}
               {isLoading && (
                 <View style={[StyleSheet.absoluteFill, styles.loadingOverlay]}>
                   <LinearGradient
-                    colors={["rgba(0,0,0,0.8)", "rgba(0,0,0,0.9)"]}
+                    colors={["rgba(0,0,0,0.85)", "rgba(0,0,0,0.95)"]}
                     style={StyleSheet.absoluteFill}
                   />
 
@@ -815,281 +817,412 @@ export default function CameraScreen() {
                     />
 
                     <View className="items-center">
-                      <View className="relative mb-6">
-                        <ActivityIndicator size="large" color="#a6d2fd" />
-                        <Text className="text-[#a6d2fd] mt-3 text-lg font-bold">
-                          Đang phân tích AI...
+                      {/* AI Icon with glow effect */}
+                      <View className="relative mb-8">
+                        <View className="bg-[#a6d2fd]/20 p-6 rounded-full mb-4">
+                          <View className="bg-[#a6d2fd]/40 p-5 rounded-full">
+                            <View className="bg-[#a6d2fd] p-4 rounded-full">
+                              <TablerIconComponent
+                                name="brain"
+                                size={40}
+                                color="white"
+                                strokeWidth={2}
+                              />
+                            </View>
+                          </View>
+                        </View>
+                        <Text className="text-[#a6d2fd] text-xl font-bold text-center">
+                          Đang phân tích AI
                         </Text>
                       </View>
 
-                      {/* Progress bar */}
-                      <View className="w-64 h-2 bg-gray-700 rounded-full mb-4">
-                        <Animated.View
-                          className="h-2 bg-[#a6d2fd] rounded-full"
-                          style={{ 
-                            width: analysisProgress ? `${analysisProgress}%` : '0%'
-                          }}
-                        />
+                      {/* Enhanced Progress bar */}
+                      <View className="w-72 mb-6">
+                        <View className="flex-row items-center justify-between mb-2">
+                          <Text className="text-white/80 text-xs font-medium">
+                            Tiến độ
+                          </Text>
+                          <Text className="text-[#a6d2fd] text-sm font-bold">
+                            {Math.round(analysisProgress)}%
+                          </Text>
+                        </View>
+                        <View className="w-full h-3 bg-gray-800 rounded-full overflow-hidden border border-gray-700">
+                          <Animated.View
+                            className="h-full rounded-full"
+                            style={{ 
+                              width: analysisProgress ? `${analysisProgress}%` : '0%',
+                              backgroundColor: "#a6d2fd",
+                            }}
+                          />
+                        </View>
                       </View>
                       
-                      <Text className="text-white text-sm">
-                        {analysisProgress < 20 && "Đang chuẩn bị dữ liệu..."}
-                        {analysisProgress >= 20 && analysisProgress < 40 && "Đang xử lý hình ảnh..."}
-                        {analysisProgress >= 40 && analysisProgress < 80 && "Đang phân tích cấu trúc..."}
-                        {analysisProgress >= 80 && analysisProgress < 100 && "Đang tính toán kết quả..."}
-                        {analysisProgress >= 100 && "Hoàn thành!"}
-                      </Text>
+                      {/* Status text with icon */}
+                      <View className="bg-black/50 px-6 py-3 rounded-2xl border border-[#a6d2fd]/30">
+                        <View className="flex-row items-center">
+                          <View className="mr-3">
+                            {analysisProgress < 20 && (
+                              <TablerIconComponent name="file-upload" size={20} color="#a6d2fd" />
+                            )}
+                            {analysisProgress >= 20 && analysisProgress < 40 && (
+                              <TablerIconComponent name="photo-scan" size={20} color="#a6d2fd" />
+                            )}
+                            {analysisProgress >= 40 && analysisProgress < 80 && (
+                              <TablerIconComponent name="scan" size={20} color="#a6d2fd" />
+                            )}
+                            {analysisProgress >= 80 && analysisProgress < 100 && (
+                              <TablerIconComponent name="calculator" size={20} color="#a6d2fd" />
+                            )}
+                            {analysisProgress >= 100 && (
+                              <TablerIconComponent name="circle-check" size={20} color="#10b981" />
+                            )}
+                          </View>
+                          <Text className="text-white text-sm font-medium">
+                            {analysisProgress < 20 && "Đang chuẩn bị dữ liệu..."}
+                            {analysisProgress >= 20 && analysisProgress < 40 && "Đang xử lý hình ảnh..."}
+                            {analysisProgress >= 40 && analysisProgress < 80 && "Đang phân tích cấu trúc..."}
+                            {analysisProgress >= 80 && analysisProgress < 100 && "Đang tính toán kết quả..."}
+                            {analysisProgress >= 100 && "Hoàn thành! ✨"}
+                          </Text>
+                        </View>
+                      </View>
                     </View>
                   </View>
                 </View>
               )}
             </View>
 
-            {/* Enhanced Analysis Results panel */}
+            {/* Enhanced Analysis Results panel - FIXED POSITIONING */}
             {showResultModal && analysisResult && (
-              <Animated.View
-                style={[
-                  styles.resultModal,
-                  {
-                    transform: [{ translateY: slideUpAnim }],
-                  },
-                ]}
-              >
-                <LinearGradient
-                  colors={["rgba(255,255,255,0.95)", "rgba(255,255,255,0.98)"]}
-                  style={styles.resultContent}
+              <View style={styles.resultModalContainer}>
+                {/* Dismissible backdrop */}
+                <TouchableOpacity
+                  style={styles.resultModalBackdrop}
+                  activeOpacity={1}
+                  onPress={closeResultModal}
+                  disabled={isSaving}
+                />
+                
+                <Animated.View
+                  style={[
+                    styles.resultModal,
+                    {
+                      transform: [{ translateY: slideUpAnim }],
+                    },
+                  ]}
                 >
-                  <TouchableOpacity
-                    className="absolute top-4 right-4 z-10"
-                    onPress={closeResultModal}
-                    disabled={isSaving}
+                  <LinearGradient
+                    colors={["#ffffff", "#f0f9ff"]}
+                    style={styles.resultContent}
                   >
-                    <View className="bg-gray-100 p-2 rounded-full">
-                      <TablerIconComponent
-                        name="x"
-                        size={20}
-                        color={isSaving ? "gray" : "#374151"}
-                        strokeWidth={2}
-                      />
-                    </View>
-                  </TouchableOpacity>
-
-                  <View className="items-center mb-6">
-                    <View className="bg-[#a6d2fd]/10 p-4 rounded-full mb-4">
-                      <TablerIconComponent
-                        name="fish"
-                        size={32}
-                        color="#a6d2fd"
-                        strokeWidth={1.5}
-                      />
+                    {/* Drag handle */}
+                    <View className="w-full items-center mb-4">
+                      <View className="w-12 h-1 bg-gray-300 rounded-full" />
                     </View>
 
-                    <Text className="text-xl font-bold text-gray-800 mb-2">
-                      Kết quả phân tích
-                    </Text>
-
-                    <Text className="text-sm text-gray-500 text-center">
-                      Phân tích tỷ lệ cơ và ruột bằng AI
-                    </Text>
-                  </View>
-
-                  {/* Health Status Card */}
-                  {healthStatus && (
-                    <View
-                      className="mb-6 p-4 rounded-2xl border"
-                      style={{
-                        backgroundColor: healthStatus.bgColor,
-                        borderColor: healthStatus.color + "30",
-                      }}
+                    <TouchableOpacity
+                      className="absolute top-6 right-4 z-10"
+                      onPress={closeResultModal}
+                      disabled={isSaving}
                     >
-                      <View className="flex-row items-center justify-center mb-2">
+                      <View className="bg-gray-100 p-2 rounded-full">
                         <TablerIconComponent
-                          name={healthStatus.icon}
-                          size={24}
-                          color={healthStatus.color}
+                          name="x"
+                          size={20}
+                          color={isSaving ? "#9ca3af" : "#374151"}
                           strokeWidth={2}
                         />
-                        <Text
-                          className="ml-2 font-bold text-lg"
-                          style={{ color: healthStatus.color }}
-                        >
-                          {healthStatus.status}
-                        </Text>
+                      </View>
+                    </TouchableOpacity>
+
+                    <View className="items-center mb-6">
+                      <View className="bg-gradient-to-br from-[#a6d2fd] to-[#7fb8f7] p-4 rounded-full mb-4 shadow-lg">
+                        <TablerIconComponent
+                          name="fish"
+                          size={36}
+                          color="white"
+                          strokeWidth={2}
+                        />
                       </View>
 
-                      <Text
-                        className="text-center text-sm"
-                        style={{ color: healthStatus.color }}
+                      <Text className="text-2xl font-bold text-gray-900 mb-2">
+                        Kết quả phân tích
+                      </Text>
+
+                      <Text className="text-sm text-gray-600 text-center px-4">
+                        🤖 Phân tích AI - Tỷ lệ cơ và ruột
+                      </Text>
+                    </View>
+
+                    {/* Health Status Card - Enhanced */}
+                    {healthStatus && (
+                      <View
+                        className="mb-6 p-5 rounded-2xl border-2"
+                        style={{
+                          backgroundColor: healthStatus.bgColor,
+                          borderColor: healthStatus.color,
+                        }}
                       >
-                        {healthStatus.description}
-                      </Text>
-                    </View>
-                  )}
-
-                  {/* Metrics */}
-                  <View className="space-y-4">
-                    <View className="flex-row justify-between items-center py-3 px-4 bg-gray-50 rounded-xl">
-                      <View className="flex-row items-center">
-                        <View className="bg-red-100 p-2 rounded-lg mr-3">
-                          <TablerIconComponent
-                            name="meat"
-                            size={20}
-                            color="#ef4444"
-                          />
+                        <View className="flex-row items-center justify-center mb-3">
+                          <View
+                            className="p-2 rounded-full mr-3"
+                            style={{ backgroundColor: healthStatus.color + "20" }}
+                          >
+                            <TablerIconComponent
+                              name={healthStatus.icon}
+                              size={28}
+                              color={healthStatus.color}
+                              strokeWidth={2.5}
+                            />
+                          </View>
+                          <View className="flex-1">
+                            <Text
+                              className="font-bold text-xl mb-1"
+                              style={{ color: healthStatus.color }}
+                            >
+                              {healthStatus.status}
+                            </Text>
+                            <Text
+                              className="text-sm font-medium"
+                              style={{ color: healthStatus.color }}
+                            >
+                              {healthStatus.description}
+                            </Text>
+                          </View>
                         </View>
-                        <Text className="text-gray-700 font-medium">
-                          Tỷ lệ cơ
-                        </Text>
                       </View>
-                      <Text className="text-lg font-bold text-gray-800">
-                        {(analysisResult.ratio_thit * 100).toFixed(1)}%
-                      </Text>
-                    </View>
+                    )}
 
-                    <View className="flex-row justify-between items-center py-3 px-4 bg-gray-50 rounded-xl">
-                      <View className="flex-row items-center">
-                        <View className="bg-orange-100 p-2 rounded-lg mr-3">
-                          <TablerIconComponent
-                            name="circle-dot"
-                            size={20}
-                            color="#f97316"
-                          />
+                    {/* Metrics - Enhanced Cards */}
+                    <View className="space-y-3">
+                      {/* Muscle Ratio */}
+                      <View className="bg-gradient-to-r from-red-50 to-red-100 p-4 rounded-2xl border border-red-200 shadow-sm">
+                        <View className="flex-row items-center justify-between">
+                          <View className="flex-row items-center flex-1">
+                            <View className="bg-red-500 p-3 rounded-xl mr-3 shadow-md">
+                              <TablerIconComponent
+                                name="meat"
+                                size={24}
+                                color="white"
+                                strokeWidth={2}
+                              />
+                            </View>
+                            <View>
+                              <Text className="text-gray-600 text-xs font-medium mb-1">
+                                Muscle Ratio
+                              </Text>
+                              <Text className="text-gray-900 font-bold text-base">
+                                Tỷ lệ cơ
+                              </Text>
+                            </View>
+                          </View>
+                          <View className="items-end">
+                            <Text className="text-3xl font-black text-red-600">
+                              {(analysisResult.ratio_thit * 100).toFixed(1)}
+                            </Text>
+                            <Text className="text-red-500 font-bold text-sm">%</Text>
+                          </View>
                         </View>
-                        <Text className="text-gray-700 font-medium">
-                          Tỷ lệ ruột
-                        </Text>
                       </View>
-                      <Text className="text-lg font-bold text-gray-800">
-                        {(analysisResult.ratio_ruot * 100).toFixed(1)}%
-                      </Text>
-                    </View>
 
-                    <View className="flex-row justify-between items-center py-4 px-4 bg-[#a6d2fd]/10 rounded-xl border border-[#a6d2fd]/20">
-                      <View className="flex-row items-center">
-                        <View className="bg-[#a6d2fd]/20 p-2 rounded-lg mr-3">
-                          <TablerIconComponent
-                            name="calculator"
-                            size={20}
-                            color="#a6d2fd"
-                          />
+                      {/* Gut Ratio */}
+                      <View className="bg-gradient-to-r from-orange-50 to-orange-100 p-4 rounded-2xl border border-orange-200 shadow-sm">
+                        <View className="flex-row items-center justify-between">
+                          <View className="flex-row items-center flex-1">
+                            <View className="bg-orange-500 p-3 rounded-xl mr-3 shadow-md">
+                              <TablerIconComponent
+                                name="circle-dot"
+                                size={24}
+                                color="white"
+                                strokeWidth={2}
+                              />
+                            </View>
+                            <View>
+                              <Text className="text-gray-600 text-xs font-medium mb-1">
+                                Gut Ratio
+                              </Text>
+                              <Text className="text-gray-900 font-bold text-base">
+                                Tỷ lệ ruột
+                              </Text>
+                            </View>
+                          </View>
+                          <View className="items-end">
+                            <Text className="text-3xl font-black text-orange-600">
+                              {(analysisResult.ratio_ruot * 100).toFixed(1)}
+                            </Text>
+                            <Text className="text-orange-500 font-bold text-sm">%</Text>
+                          </View>
                         </View>
-                        <Text className="text-gray-700 font-semibold">
-                          Tỷ lệ cơ:ruột
-                        </Text>
                       </View>
-                      <Text className="text-xl font-bold text-[#a6d2fd]">
-                        {(
-                          analysisResult.ratio_thit / analysisResult.ratio_ruot
-                        ).toFixed(2)}:1
-                      </Text>
+
+                      {/* Main Ratio - Highlighted */}
+                      <View className="bg-gradient-to-r from-[#a6d2fd] to-[#7fb8f7] p-5 rounded-2xl border-2 border-[#7fb8f7] shadow-lg">
+                        <View className="absolute top-2 right-2 bg-white/90 px-2 py-1 rounded-full">
+                          <Text className="text-[#7fb8f7] font-bold text-xs">
+                            TỶ LỆ CHÍNH
+                          </Text>
+                        </View>
+                        <View className="flex-row items-center justify-between mt-4">
+                          <View className="flex-row items-center flex-1">
+                            <View className="bg-white p-3 rounded-xl mr-3 shadow-md">
+                              <TablerIconComponent
+                                name="calculator"
+                                size={24}
+                                color="#7fb8f7"
+                                strokeWidth={2.5}
+                              />
+                            </View>
+                            <View>
+                              <Text className="text-white text-xs font-bold mb-1">
+                                Muscle : Gut Ratio
+                              </Text>
+                              <Text className="text-white font-black text-base">
+                                Tỷ lệ cơ : ruột
+                              </Text>
+                            </View>
+                          </View>
+                          <View className="items-end">
+                            <Text className="text-4xl font-black text-white">
+                              {(
+                                analysisResult.ratio_thit / analysisResult.ratio_ruot
+                              ).toFixed(2)}
+                            </Text>
+                            <Text className="text-white font-bold text-sm">: 1</Text>
+                          </View>
+                        </View>
+                      </View>
                     </View>
-                  </View>
-                </LinearGradient>
-              </Animated.View>
+                  </LinearGradient>
+                </Animated.View>
+              </View>
             )}
           </ViewShot>
 
-          {/* NEW: Top controls for image view */}
+          {/* Enhanced Top controls for image view */}
           {analysisResult && maskImageUri && (
             <View style={styles.imageViewTopControls}>
               <TouchableOpacity
-                className="bg-black/60 backdrop-blur-sm p-3 rounded-2xl"
+                className="bg-black/70 backdrop-blur-md px-4 py-3 rounded-2xl"
                 onPress={toggleMaskOverlay}
                 style={styles.maskToggleButton}
               >
                 <View className="flex-row items-center">
-                  <TablerIconComponent
-                    name={showMaskOverlay ? "eye" : "eye-off"}
-                    size={20}
-                    color="white"
-                    strokeWidth={2}
-                  />
-                  <Text className="text-white ml-2 font-medium text-sm">
-                    {showMaskOverlay ? "Ẩn phân tích" : "Hiện phân tích"}
-                  </Text>
+                  <View className="bg-white/20 p-2 rounded-lg mr-2">
+                    <TablerIconComponent
+                      name={showMaskOverlay ? "eye" : "eye-off"}
+                      size={20}
+                      color="white"
+                      strokeWidth={2.5}
+                    />
+                  </View>
+                  <View>
+                    <Text className="text-white font-bold text-sm">
+                      {showMaskOverlay ? "Ẩn phân tích" : "Hiện phân tích"}
+                    </Text>
+                    <Text className="text-white/80 text-xs">
+                      {showMaskOverlay ? "Xem ảnh gốc" : "Xem kết quả AI"}
+                    </Text>
+                  </View>
                 </View>
               </TouchableOpacity>
             </View>
           )}
 
-          {/* Enhanced bottom controls */}
-          <View className="absolute bottom-8 w-full">
-            <View className="flex-row justify-center items-center gap-6 px-8">
+          {/* Enhanced bottom controls with better styling */}
+          <View className="absolute bottom-8 w-full px-6">
+            <View className="flex-row justify-center items-center gap-4">
               <TouchableOpacity
-                className="bg-white/90 backdrop-blur-sm p-4 rounded-2xl shadow-lg"
+                className="bg-white/95 backdrop-blur-sm p-4 rounded-2xl shadow-lg items-center"
                 onPress={retakePhoto}
                 disabled={isLoading || isSaving}
                 style={styles.controlButton}
               >
                 <TablerIconComponent
                   name="arrow-left"
-                  size={24}
+                  size={26}
                   color={isLoading || isSaving ? "#9ca3af" : "#374151"}
-                  strokeWidth={2}
+                  strokeWidth={2.5}
                 />
               </TouchableOpacity>
 
               {analysisResult ? (
                 <>
-                  {/* NEW: Info/Details button */}
+                  {/* Info/Details button */}
                   <TouchableOpacity
-                    className="bg-white/90 backdrop-blur-sm p-4 rounded-2xl shadow-lg"
+                    className="bg-white/95 backdrop-blur-sm p-4 rounded-2xl shadow-lg items-center"
                     onPress={() => setShowResultModal(!showResultModal)}
                     disabled={isSaving}
                     style={styles.controlButton}
                   >
                     <TablerIconComponent
-                      name={showResultModal ? "info-circle-filled" : "info-circle"}
-                      size={24}
+                      name={showResultModal ? "chart-bar" : "chart-bar"}
+                      size={26}
                       color={isSaving ? "#9ca3af" : "#a6d2fd"}
-                      strokeWidth={2}
+                      strokeWidth={2.5}
                     />
                   </TouchableOpacity>
 
-                  {/* Save button */}
+                  {/* Save button with enhanced styling */}
                   <TouchableOpacity
-                    className="bg-[#a6d2fd] p-4 rounded-2xl shadow-lg"
+                    className="bg-[#a6d2fd] px-8 py-4 rounded-2xl shadow-lg flex-row items-center"
                     onPress={saveImages}
                     disabled={isSaving}
                     style={styles.primaryButton}
                   >
                     {isSaving ? (
-                      <ActivityIndicator size="small" color="white" />
+                      <>
+                        <ActivityIndicator size="small" color="white" />
+                        <Text className="text-white font-bold ml-3 text-base">
+                          Đang lưu...
+                        </Text>
+                      </>
                     ) : (
-                      <TablerIconComponent
-                        name="download"
-                        size={24}
-                        color="white"
-                        strokeWidth={2}
-                      />
+                      <>
+                        <TablerIconComponent
+                          name="device-floppy"
+                          size={24}
+                          color="white"
+                          strokeWidth={2.5}
+                        />
+                        <Text className="text-white font-bold ml-3 text-base">
+                          Lưu kết quả
+                        </Text>
+                      </>
                     )}
                   </TouchableOpacity>
                 </>
               ) : (
                 <TouchableOpacity
-                  className="bg-[#a6d2fd] p-5 rounded-2xl shadow-lg flex-row items-center  mx-5"
+                  className="bg-gradient-to-r from-[#a6d2fd] to-[#7fb8f7] px-8 py-5 rounded-2xl shadow-lg flex-row items-center flex-1 max-w-xs"
                   onPress={analyzeShrimpImage}
                   disabled={isLoading}
-                  style={styles.primaryButton}
+                  style={styles.analyzeButton}
                 >
                   {isLoading ? (
                     <>
                       <ActivityIndicator size="small" color="white" />
-                      <Text className="text-white font-bold ml-2">
+                      <Text className="text-white font-bold ml-3 text-base">
                         Đang phân tích...
                       </Text>
                     </>
                   ) : (
                     <>
-                      <TablerIconComponent
-                        name="scan"
-                        size={24}
-                        color="white"
-                        strokeWidth={2}
-                      />
-                      <Text className="text-white font-bold ml-2">
-                        Phân tích AI
-                      </Text>
+                      <View className="bg-white/20 p-2 rounded-lg mr-2">
+                        <TablerIconComponent
+                          name="brain"
+                          size={24}
+                          color="white"
+                          strokeWidth={2.5}
+                        />
+                      </View>
+                      <View className="flex-1">
+                        <Text className="text-white font-black text-lg">
+                          Phân tích AI
+                        </Text>
+                        <Text className="text-white/90 text-xs">
+                          Nhấn để bắt đầu
+                        </Text>
+                      </View>
                     </>
                   )}
                 </TouchableOpacity>
@@ -1169,26 +1302,39 @@ export default function CameraScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Enhanced shrimp detection guide */}
+            {/* Enhanced shrimp detection guide with better visuals */}
             <View style={styles.detectionGuide}>
               <View style={styles.detectionFrame}>
+                {/* Animated corner brackets */}
                 <View style={styles.frameCorner} />
                 <View style={[styles.frameCorner, styles.frameCornerTopRight]} />
                 <View style={[styles.frameCorner, styles.frameCornerBottomLeft]} />
                 <View style={[styles.frameCorner, styles.frameCornerBottomRight]} />
 
-                <View className="absolute -top-12 w-full">
-                  <View className="bg-black/60 backdrop-blur-sm px-4 py-2 rounded-2xl mx-auto">
-                    <Text className="text-white text-center font-medium">
-                      🦐 Đặt tôm vào trong khung
-                    </Text>
+                {/* Center crosshair */}
+                <View style={styles.crosshair}>
+                  <View style={styles.crosshairHorizontal} />
+                  <View style={styles.crosshairVertical} />
+                  <View style={styles.crosshairCenter} />
+                </View>
+
+                <View className="absolute -top-16 w-full px-4">
+                  <View className="bg-black/70 backdrop-blur-sm px-5 py-3 rounded-2xl">
+                    <View className="flex-row items-center justify-center">
+                      <Text className="text-2xl mr-2">🦐</Text>
+                      <Text className="text-white text-center font-bold text-base">
+                        Đặt tôm vào trong khung
+                      </Text>
+                    </View>
                   </View>
                 </View>
 
-                <View className="absolute -bottom-12 w-full">
-                  <Text className="text-white/80 text-center text-sm">
-                    Đảm bảo tôm được chiếu sáng đều
-                  </Text>
+                <View className="absolute -bottom-16 w-full px-4">
+                  <View className="bg-black/50 backdrop-blur-sm px-4 py-2 rounded-xl">
+                    <Text className="text-white/90 text-center text-xs font-medium">
+                      💡 Đảm bảo tôm được chiếu sáng đều và rõ nét
+                    </Text>
+                  </View>
                 </View>
               </View>
             </View>
@@ -1213,78 +1359,96 @@ export default function CameraScreen() {
           </>
         )}
 
-        {/* Enhanced bottom controls */}
+        {/* Enhanced bottom controls with better layout */}
         <View style={styles.bottomControls}>
-          {/* Gallery button */}
+          {/* Gallery button with label */}
           <TouchableOpacity
-            className="bg-white/90 backdrop-blur-sm h-16 w-16 rounded-2xl flex items-center justify-center shadow-lg"
+            className="items-center"
             onPress={pickImage}
             disabled={isLoading || isSaving}
-            style={styles.galleryButton}
+            style={styles.sideButton}
           >
-            <TablerIconComponent
-              name="photo"
-              size={28}
-              color={isLoading || isSaving ? "#9ca3af" : "#a6d2fd"}
-              strokeWidth={2}
-            />
+            <View 
+              className="bg-white/95 backdrop-blur-sm h-16 w-16 rounded-2xl flex items-center justify-center shadow-lg mb-2"
+              style={styles.galleryButton}
+            >
+              <TablerIconComponent
+                name="photo"
+                size={28}
+                color={isLoading || isSaving ? "#9ca3af" : "#a6d2fd"}
+                strokeWidth={2}
+              />
+            </View>
+            <Text className="text-white text-xs font-medium">Thư viện</Text>
           </TouchableOpacity>
 
-          {/* Enhanced camera button with pulse animation */}
-          <Animated.View
-            style={[
-              styles.cameraButtonContainer,
-              {
-                transform: [{ scale: pulseAnim }],
-              },
-            ]}
-          >
-            <TouchableOpacity
-              className="bg-white h-20 w-20 rounded-full flex items-center justify-center shadow-xl"
-              onPress={takePicture}
-              disabled={
-                isLoading ||
-                isSaving ||
-                !cameraPermissionGrantedDelayed ||
-                !isCameraReady
-              }
+          {/* Enhanced camera button with pulse animation and outer ring */}
+          <View className="items-center">
+            <Animated.View
+              style={[
+                styles.cameraButtonContainer,
+                {
+                  transform: [{ scale: pulseAnim }],
+                },
+              ]}
             >
-              <View className="bg-[#a6d2fd] h-16 w-16 rounded-full flex items-center justify-center">
-                <TablerIconComponent
-                  name="camera"
-                  size={32}
-                  color={
-                    isLoading ||
-                    isSaving ||
-                    !cameraPermissionGrantedDelayed ||
-                    !isCameraReady
-                      ? "#9ca3af"
-                      : "white"
-                  }
-                  strokeWidth={2}
-                />
-              </View>
-            </TouchableOpacity>
-          </Animated.View>
+              <TouchableOpacity
+                className="bg-white/10 h-24 w-24 rounded-full flex items-center justify-center border-4 border-white/30"
+                onPress={takePicture}
+                disabled={
+                  isLoading ||
+                  isSaving ||
+                  !cameraPermissionGrantedDelayed ||
+                  !isCameraReady
+                }
+              >
+                <View className="bg-white h-20 w-20 rounded-full flex items-center justify-center">
+                  <View className="bg-[#a6d2fd] h-16 w-16 rounded-full flex items-center justify-center">
+                    <TablerIconComponent
+                      name="camera"
+                      size={32}
+                      color={
+                        isLoading ||
+                        isSaving ||
+                        !cameraPermissionGrantedDelayed ||
+                        !isCameraReady
+                          ? "#9ca3af"
+                          : "white"
+                      }
+                      strokeWidth={2.5}
+                    />
+                  </View>
+                </View>
+              </TouchableOpacity>
+            </Animated.View>
+            <Text className="text-white text-xs font-bold mt-2">Chụp ảnh</Text>
+          </View>
 
-          {/* AI Info button */}
+          {/* AI Info button with label */}
           <TouchableOpacity
-            className="bg-white/90 backdrop-blur-sm h-16 w-16 rounded-2xl flex items-center justify-center shadow-lg"
+            className="items-center"
             onPress={() => {
               Alert.alert(
-                "Phân tích AI",
-                "Công nghệ AI tiên tiến giúp phân tích tỷ lệ cơ và ruột của tôm, đánh giá sức khỏe và chất lượng nuôi trồng."
+                "🤖 Phân tích AI",
+                "Công nghệ AI tiên tiến giúp:\n\n• Phân tích tỷ lệ cơ và ruột\n• Đánh giá sức khỏe tôm\n• Tối ưu chất lượng nuôi trồng\n\nKết quả chính xác trong vài giây!",
+                [{ text: "Đã hiểu", style: "default" }]
               );
             }}
             disabled={isLoading || isSaving}
-            style={styles.infoButton}
+            style={styles.sideButton}
           >
-            <TablerIconComponent
-              name="info-circle"
-              size={28}
-              color={isLoading || isSaving ? "#9ca3af" : "#a6d2fd"}
-              strokeWidth={2}
-            />
+            <View 
+              className="bg-white/95 backdrop-blur-sm h-16 w-16 rounded-2xl flex items-center justify-center shadow-lg mb-2"
+              style={styles.infoButton}
+            >
+              <TablerIconComponent
+                name="info-circle"
+                size={28}
+                color={isLoading || isSaving ? "#9ca3af" : "#a6d2fd"}
+                strokeWidth={2}
+              />
+            </View>
+            <Text className="text-white text-xs font-medium">Trợ giúp</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -1372,74 +1536,102 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   loadingOverlay: {
-    backgroundColor: "rgba(0,0,0,0.8)",
     justifyContent: "center",
     alignItems: "center",
+    zIndex: 50,
+    elevation: 50,
   },
   loadingContainer: {
     alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.9)",
+    backgroundColor: "rgba(0,0,0,0.85)",
     paddingHorizontal: 40,
-    paddingVertical: 30,
-    borderRadius: 24,
-    minWidth: 280,
+    paddingVertical: 40,
+    borderRadius: 32,
+    minWidth: 320,
+    borderWidth: 1,
+    borderColor: "rgba(166, 210, 253, 0.3)",
   },
   scanLine: {
     position: "absolute",
-    width: 200,
-    height: 2,
+    width: 250,
+    height: 3,
     backgroundColor: "#a6d2fd",
     shadowColor: "#a6d2fd",
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 10,
+    shadowOpacity: 1,
+    shadowRadius: 15,
+    elevation: 10,
   },
-  resultModal: {
+  resultModalContainer: {
     position: "absolute",
-    bottom: 100,
+    top: 0,
     left: 0,
     right: 0,
-    maxHeight: height * 0.7,
+    bottom: 0,
+    zIndex: 100,
+    elevation: 100,
+    justifyContent: "flex-end",
+  },
+  resultModalBackdrop: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  resultModal: {
+    maxHeight: height * 0.75,
+    zIndex: 101,
+    elevation: 101,
   },
   resultContent: {
     padding: 24,
-    paddingTop: 32,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    borderBottomEndRadius: 24,
-    borderBottomStartRadius: 24,
+    paddingTop: 20,
+    paddingBottom: 120,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
     minHeight: 400,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -5 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 20,
   },
   detectionFrame: {
-    width: width * 0.8,
-    height: 280,
+    width: width * 0.85,
+    height: 300,
     position: "relative",
     justifyContent: "center",
     alignItems: "center",
   },
   frameCorner: {
     position: "absolute",
-    width: 30,
-    height: 30,
-    borderTopWidth: 3,
-    borderLeftWidth: 3,
+    width: 40,
+    height: 40,
+    borderTopWidth: 4,
+    borderLeftWidth: 4,
     borderColor: "#a6d2fd",
     top: 0,
     left: 0,
+    shadowColor: "#a6d2fd",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 8,
   },
   frameCornerTopRight: {
     top: 0,
     right: 0,
     left: "auto",
-    borderTopWidth: 3,
-    borderRightWidth: 3,
+    borderTopWidth: 4,
+    borderRightWidth: 4,
     borderLeftWidth: 0,
   },
   frameCornerBottomLeft: {
     bottom: 0,
     top: "auto",
-    borderBottomWidth: 3,
-    borderLeftWidth: 3,
+    borderBottomWidth: 4,
+    borderLeftWidth: 4,
     borderTopWidth: 0,
   },
   frameCornerBottomRight: {
@@ -1447,10 +1639,39 @@ const styles = StyleSheet.create({
     right: 0,
     top: "auto",
     left: "auto",
-    borderBottomWidth: 3,
-    borderRightWidth: 3,
+    borderBottomWidth: 4,
+    borderRightWidth: 4,
     borderTopWidth: 0,
     borderLeftWidth: 0,
+  },
+  crosshair: {
+    position: "absolute",
+    width: 60,
+    height: 60,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  crosshairHorizontal: {
+    position: "absolute",
+    width: 40,
+    height: 2,
+    backgroundColor: "#a6d2fd",
+    opacity: 0.6,
+  },
+  crosshairVertical: {
+    position: "absolute",
+    width: 2,
+    height: 40,
+    backgroundColor: "#a6d2fd",
+    opacity: 0.6,
+  },
+  crosshairCenter: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#a6d2fd",
+    borderWidth: 2,
+    borderColor: "white",
   },
   topControlButton: {
     shadowColor: "#000",
@@ -1468,30 +1689,40 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     shadowColor: "#a6d2fd",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4.65,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  analyzeButton: {
+    shadowColor: "#7fb8f7",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    elevation: 12,
+  },
+  sideButton: {
+    opacity: 1,
   },
   cameraButtonContainer: {
-    shadowColor: "#000",
+    shadowColor: "#a6d2fd",
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
     elevation: 10,
   },
   galleryButton: {
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4.65,
+    shadowOpacity: 0.25,
+    shadowRadius: 5,
     elevation: 8,
   },
   infoButton: {
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4.65,
+    shadowOpacity: 0.25,
+    shadowRadius: 5,
     elevation: 8,
   },
 });
