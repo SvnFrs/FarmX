@@ -824,12 +824,14 @@ export default function CameraScreen() {
 
                       {/* Progress bar */}
                       <View className="w-64 h-2 bg-gray-700 rounded-full mb-4">
-                        <View
-                          className="h-2 bg-[#a6d2fd] rounded-full transition-all duration-300"
-                          style={{ width: `${analysisProgress}%` }}
+                        <Animated.View
+                          className="h-2 bg-[#a6d2fd] rounded-full"
+                          style={{ 
+                            width: analysisProgress ? `${analysisProgress}%` : '0%'
+                          }}
                         />
                       </View>
-
+                      
                       <Text className="text-white text-sm">
                         {analysisProgress < 20 && "Đang chuẩn bị dữ liệu..."}
                         {analysisProgress >= 20 && analysisProgress < 40 && "Đang xử lý hình ảnh..."}

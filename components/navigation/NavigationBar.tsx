@@ -1,8 +1,9 @@
 import React from "react";
-import { View } from "react-native";
+import { View, StyleSheet, Platform } from "react-native";
 import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import NavigationButton from "./NavigationButton";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { BlurView } from "expo-blur";
 
 export default function NavigationBar({
   state,
@@ -20,24 +21,15 @@ export default function NavigationBar({
   const currentRoute = state.routes[state.index];
   const isCameraTab = currentRoute.name === "camera";
 
-  // Set background color based on current tab
-  const bgColor = isCameraTab ? "bg-transparent" : "bg-[#e4f3ff]";
-
-  // Optional: slightly darken buttons if transparent for better visibility
-  const buttonBgClass = isCameraTab ? "bg-black/30" : "bg-transparent";
-  const focusedButtonClass = isCameraTab ? "bg-[#a6d2fd]" : "bg-[#b2dcfe]";
-
   return (
     <View
-      className={`absolute bottom-0 left-0 right-0 flex-row justify-between gap-2 items-center ${bgColor} py-2 w-full px-2`}
-      style={{
-        position: "absolute",
-        bottom: 0,
-        left: 0,
-        right: 0,
-        paddingBottom: insets.bottom > 0 ? insets.bottom : 8,
-        zIndex: 999,
-      }}
+      style={[
+        styles.container,
+        {
+          paddingBottom: insets.bottom > 0 ? insets.bottom : 8,
+          backgroundColor: isCameraTab ? 'transparent' : 'rgba(255, 255, 255, 0.95)',
+        }
+      ]}
     >
       {state.routes.map((route, index) => {
         const { options } = descriptors[route.key];
@@ -77,12 +69,38 @@ export default function NavigationBar({
             isFocused={isFocused}
             routeName={route.name}
             label={label}
-            buttonBgClass={buttonBgClass}
-            focusedButtonClass={focusedButtonClass}
-            isTransparentMode={isCameraTab}
+            isCameraTab={isCameraTab}
           />
         );
       })}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingTop: 12,
+    paddingHorizontal: 8,
+    borderTopWidth: 0.5,
+    borderTopColor: 'rgba(0, 0, 0, 0.1)',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -3 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 16,
+      },
+    }),
+    zIndex: 999,
+  },
+});

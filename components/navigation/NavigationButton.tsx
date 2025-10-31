@@ -1,5 +1,5 @@
-import { Text, Pressable } from "react-native";
-import React from "react";
+import { Text, Pressable, StyleSheet, Animated, Platform } from "react-native";
+import React, { useEffect, useRef } from "react";
 import TablerIconComponent from "@/components/icon";
 
 type NavigationButtonProps = {
@@ -8,9 +8,7 @@ type NavigationButtonProps = {
   isFocused: boolean;
   routeName: string;
   label: string | any;
-  buttonBgClass?: string;
-  focusedButtonClass?: string;
-  isTransparentMode?: boolean;
+  isCameraTab?: boolean;
 };
 
 export default function NavigationButton({
@@ -19,55 +17,113 @@ export default function NavigationButton({
   isFocused,
   routeName,
   label,
-  buttonBgClass = "bg-transparent",
-  focusedButtonClass = "bg-white",
-  isTransparentMode = false,
+  isCameraTab = false,
 }: NavigationButtonProps) {
-  const buttonStyles = isFocused ? focusedButtonClass : buttonBgClass;
-  const textColor = isFocused ? "text-black" : "text-gray-100";
+  // Animation for smooth transitions
+  const scaleAnim = useRef(new Animated.Value(isFocused ? 1 : 0.9)).current;
+  const opacityAnim = useRef(new Animated.Value(isFocused ? 1 : 0.6)).current;
 
-  // Adjust icon color based on mode and focus state
-  const iconColor = isTransparentMode
-    ? isFocused
-      ? "#0d4a4f"
-      : "#fff"
-    : isFocused
-      ? "#0d4a4f"
-      : "#374151";
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(scaleAnim, {
+        toValue: isFocused ? 1 : 0.9,
+        useNativeDriver: true,
+        tension: 100,
+        friction: 7,
+      }),
+      Animated.timing(opacityAnim, {
+        toValue: isFocused ? 1 : 0.6,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [isFocused]);
 
-  // Map route names to icon names
+  // Icon colors - modern and vibrant
+  const getIconColor = () => {
+    if (isCameraTab) {
+      return isFocused ? '#ffffff' : 'rgba(255, 255, 255, 0.6)';
+    }
+    return isFocused ? '#2563eb' : '#9ca3af';
+  };
+
+  // Map route names to icon names with modern icons
   const getIconName = (route: string) => {
     const iconMap: { [key: string]: string } = {
-      index: "fish",
-      shop: "building-store",
-      camera: "camera",
-      manage: "fish",
+      index: "home",
+      shop: "shopping-bag",
+      camera: "scan",
+      manage: "layout-grid",
       notification: "bell",
     };
-    return iconMap[route] || "question-mark";
+    return iconMap[route] || "circle";
   };
 
   return (
     <Pressable
       onPress={onPress}
       onLongPress={onLongPress}
-      className={`flex-1 items-center justify-center py-2 px-1 rounded-2xl ${buttonStyles}`}
+      style={styles.button}
     >
-      <TablerIconComponent
-        name={getIconName(routeName)}
-        size={24}
-        color={iconColor}
-      />
+      <Animated.View
+        style={[
+          styles.iconContainer,
+          {
+            transform: [{ scale: scaleAnim }],
+            opacity: opacityAnim,
+            backgroundColor: isFocused && !isCameraTab ? '#eff6ff' : 'transparent',
+          },
+        ]}
+      >
+        <TablerIconComponent
+          name={getIconName(routeName)}
+          size={isFocused ? 26 : 24}
+          color={getIconColor()}
+        />
+      </Animated.View>
 
-      {/* show the label only when focused */}
+      {/* Show label only when focused */}
       {isFocused && (
-        <Text
+        <Animated.Text
           numberOfLines={1}
-          className={`text-xs font-bold mt-1 ${textColor}`}
+          style={[
+            styles.label,
+            {
+              opacity: opacityAnim,
+              color: isCameraTab ? '#ffffff' : '#2563eb',
+            },
+          ]}
         >
-          {label}
-        </Text>
+          {typeof label === 'string' ? label : ''}
+        </Animated.Text>
       )}
     </Pressable>
   );
 }
+
+const styles = StyleSheet.create({
+  button: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+  },
+  iconContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  label: {
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 4,
+    ...Platform.select({
+      ios: {
+        letterSpacing: -0.2,
+      },
+    }),
+  },
+});

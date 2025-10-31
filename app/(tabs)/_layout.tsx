@@ -18,31 +18,31 @@ export default function TabLayout() {
         <Tabs.Screen
           name="index"
           options={{
-            title: "Tin tức",
+            title: "Home",
           }}
         />
         <Tabs.Screen
           name="shop"
           options={{
-            title: "Cửa hàng",
+            title: "Store",
           }}
         />
         <Tabs.Screen
           name="camera"
           options={{
-            title: "Camera",
+            title: "Scan",
           }}
         />
         <Tabs.Screen
           name="manage"
           options={{
-            title: "Quản lý",
+            title: "Manage",
           }}
         />
         <Tabs.Screen
           name="notification"
           options={{
-            title: "Thông báo",
+            title: "Alerts",
           }}
         />
       </Tabs>
