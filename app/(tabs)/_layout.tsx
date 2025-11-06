@@ -1,6 +1,6 @@
 import React from "react";
 import { Tabs } from "expo-router";
-import { StatusBar, View } from "react-native";
+import { StatusBar } from "react-native";
 import NavigationBar from "@/components/navigation/NavigationBar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
@@ -11,9 +11,24 @@ export default function TabLayout() {
       <Tabs
         screenOptions={{
           headerShown: false,
-          tabBarStyle: { display: "none" }, // Hide the default tab bar
+          tabBarStyle: { display: "none" },
         }}
-        tabBar={(props) => <NavigationBar {...props} />}
+        tabBar={(props) => {
+          // Filter out the result screen from navigation
+          const filteredState = {
+            ...props.state,
+            routes: props.state.routes.filter(route => route.name !== 'result'),
+          };
+
+          // Adjust index if needed
+          if (props.state.index >= filteredState.routes.length) {
+            filteredState.index = filteredState.routes.length - 1;
+          } else {
+            filteredState.index = props.state.index;
+          }
+
+          return <NavigationBar {...props} state={filteredState} />;
+        }}
       >
         <Tabs.Screen
           name="index"
@@ -43,6 +58,12 @@ export default function TabLayout() {
           name="notification"
           options={{
             title: "Alerts",
+          }}
+        />
+        <Tabs.Screen
+          name="result"
+          options={{
+            title: "Result",
           }}
         />
       </Tabs>
