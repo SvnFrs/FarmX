@@ -1,0 +1,1391 @@
+openapi: 3.0.0
+info:
+  title: FarmX API
+  description: API for Farm/Pond/Scan Management System
+  version: 1.0.0
+  contact:
+    name: FarmX Team
+
+servers:
+  - url: http://localhost:4000/api
+    description: Development server
+
+tags:
+  - name: Auth
+    description: Authentication endpoints
+  - name: Farms
+    description: Farm management
+  - name: Ponds
+    description: Pond management
+  - name: Scans
+    description: Scan results
+  - name: Analytics
+    description: Data analytics
+  - name: Products
+    description: Product management
+  - name: Cart
+    description: Shopping cart
+  - name: Orders
+    description: Order management
+  - name: Users
+    description: User management
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+        errors:
+          type: array
+          items:
+            type: object
+
+    User:
+      type: object
+      properties:
+        _id:
+          type: string
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        fullName:
+          type: string
+        phone:
+          type: string
+        role:
+          type: string
+          enum: [user, admin, expert]
+        subLevel:
+          type: integer
+        ownedProducts:
+          type: array
+          items:
+            type: string
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Farm:
+      type: object
+      properties:
+        _id:
+          type: string
+        name:
+          type: string
+        location:
+          type: string
+        owner:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Pond:
+      type: object
+      properties:
+        _id:
+          type: string
+        name:
+          type: string
+        farm:
+          type: string
+        area:
+          type: number
+        status:
+          type: string
+          enum: [active, inactive, maintenance]
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ScanResult:
+      type: object
+      properties:
+        _id:
+          type: string
+        pond:
+          type: string
+        deviceId:
+          type: string
+        healthScore:
+          type: number
+          minimum: 0
+          maximum: 100
+        diseasePrediction:
+          type: object
+          properties:
+            disease:
+              type: string
+            confidence:
+              type: number
+            recommendations:
+              type: array
+              items:
+                type: string
+        metrics:
+          type: object
+          additionalProperties: true
+        rawData:
+          type: object
+        imageUrl:
+          type: string
+          format: uri
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Product:
+      type: object
+      properties:
+        _id:
+          type: string
+        name:
+          type: string
+        price:
+          type: number
+        sku:
+          type: string
+        description:
+          type: string
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Order:
+      type: object
+      properties:
+        _id:
+          type: string
+        user:
+          type: string
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              product:
+                type: string
+              qty:
+                type: integer
+              priceAtPurchase:
+                type: number
+        total:
+          type: number
+        status:
+          type: string
+          enum: [pending, completed, cancelled]
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+paths:
+  /auth/login:
+    post:
+      tags:
+        - Auth
+      summary: Login with username and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - password
+              properties:
+                username:
+                  type: string
+                  example: user
+                password:
+                  type: string
+                  example: user
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  token:
+                    type: string
+                  user:
+                    $ref: "#/components/schemas/User"
+        "401":
+          description: Invalid credentials
+
+  /auth/autologin:
+    get:
+      tags:
+        - Auth
+      summary: Auto-login with default user
+      responses:
+        "200":
+          description: Auto-login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  token:
+                    type: string
+                  message:
+                    type: string
+                  user:
+                    $ref: "#/components/schemas/User"
+
+  /auth/me:
+    get:
+      tags:
+        - Auth
+      summary: Get current user information
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: User information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  user:
+                    $ref: "#/components/schemas/User"
+
+  /farms:
+    get:
+      tags:
+        - Farms
+      summary: Get all farms for current user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of farms
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  count:
+                    type: integer
+                  farms:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Farm"
+    post:
+      tags:
+        - Farms
+      summary: Create a new farm
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  example: My Farm
+                location:
+                  type: string
+                  example: Mekong Delta
+      responses:
+        "201":
+          description: Farm created
+
+  /farms/{id}:
+    get:
+      tags:
+        - Farms
+      summary: Get farm by ID with ponds
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Farm details
+    put:
+      tags:
+        - Farms
+      summary: Update farm
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                location:
+                  type: string
+      responses:
+        "200":
+          description: Farm updated
+    delete:
+      tags:
+        - Farms
+      summary: Delete farm
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Farm deleted
+
+  /farms/{farmId}/ponds:
+    get:
+      tags:
+        - Ponds
+      summary: Get all ponds in a farm
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: farmId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of ponds
+    post:
+      tags:
+        - Ponds
+      summary: Create pond in farm
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: farmId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  example: Pond 1
+                area:
+                  type: number
+                  example: 1000
+      responses:
+        "201":
+          description: Pond created
+
+  /ponds/{pondId}/analytics:
+    get:
+      tags:
+        - Analytics
+      summary: Get analytics for a pond
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: pondId
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: from
+          schema:
+            type: string
+            format: date
+            example: "2024-01-01"
+        - in: query
+          name: to
+          schema:
+            type: string
+            format: date
+            example: "2024-01-31"
+      responses:
+        "200":
+          description: Analytics data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  analytics:
+                    type: object
+                    properties:
+                      period:
+                        type: object
+                      totalScans:
+                        type: integer
+                      avgMetrics:
+                        type: object
+                      trend:
+                        type: array
+                        items:
+                          type: object
+
+  /scans:
+    get:
+      tags:
+        - Scans
+      summary: Get all scans
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: pondId
+          schema:
+            type: string
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: List of scans
+    post:
+      tags:
+        - Scans
+      summary: Create scan result
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - metrics
+              properties:
+                deviceId:
+                  type: string
+                  example: DEVICE-001
+                metrics:
+                  type: object
+                  example:
+                    weight: 250
+                    length: 25.5
+                    MGR: 1.5
+                rawData:
+                  type: object
+                saveToPondId:
+                  type: string
+      responses:
+        "201":
+          description: Scan created
+
+  /products:
+    get:
+      tags:
+        - Products
+      summary: Get all products
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+        - in: query
+          name: isActive
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: List of products
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  page:
+                    type: integer
+                  limit:
+                    type: integer
+                  total:
+                    type: integer
+                  totalPages:
+                    type: integer
+                  products:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Product"
+    post:
+      tags:
+        - Products
+      summary: Create a new product (admin only)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - price
+              properties:
+                name:
+                  type: string
+                price:
+                  type: number
+                  minimum: 0
+                sku:
+                  type: string
+                description:
+                  type: string
+      responses:
+        "201":
+          description: Product created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  product:
+                    $ref: "#/components/schemas/Product"
+
+  /cart:
+    get:
+      tags:
+        - Cart
+      summary: Get current user's cart
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Cart contents
+    post:
+      tags:
+        - Cart
+      summary: Add item to cart
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - productId
+                - qty
+              properties:
+                productId:
+                  type: string
+                qty:
+                  type: integer
+                  minimum: 1
+      responses:
+        "200":
+          description: Item added
+
+  /cart/checkout:
+    post:
+      tags:
+        - Cart
+      summary: Checkout cart
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Checkout successful
+
+  /ponds:
+    get:
+      tags:
+        - Ponds
+      summary: Get all ponds for current user (across all farms)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: isActive
+          schema:
+            type: boolean
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [active, inactive, maintenance]
+        - in: query
+          name: farmId
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of ponds
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  count:
+                    type: integer
+                  ponds:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Pond"
+
+  /ponds/{pondId}:
+    get:
+      tags:
+        - Ponds
+      summary: Get a single pond
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: pondId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Pond details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  pond:
+                    $ref: "#/components/schemas/Pond"
+    put:
+      tags:
+        - Ponds
+      summary: Update a pond
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: pondId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                area:
+                  type: number
+                status:
+                  type: string
+                  enum: [active, inactive, maintenance]
+      responses:
+        "200":
+          description: Pond updated
+    delete:
+      tags:
+        - Ponds
+      summary: Delete a pond
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: pondId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Pond deleted
+
+  /ponds/{pondId}/scans:
+    get:
+      tags:
+        - Scans
+      summary: Get all scans for a pond
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: pondId
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: List of scans
+
+  /scans/history:
+    get:
+      tags:
+        - Scans
+      summary: Get scan history
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: pondId
+          schema:
+            type: string
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: Scan history
+
+  /scans/monthly-stats:
+    get:
+      tags:
+        - Scans
+      summary: Get monthly scan statistics
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: month
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 12
+        - in: query
+          name: year
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Monthly statistics
+
+  /scans/{id}:
+    get:
+      tags:
+        - Scans
+      summary: Get a single scan result
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Scan details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  scan:
+                    $ref: "#/components/schemas/ScanResult"
+    put:
+      tags:
+        - Scans
+      summary: Update a scan result
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                metrics:
+                  type: object
+                healthScore:
+                  type: number
+                  minimum: 0
+                  maximum: 100
+                diseasePrediction:
+                  type: object
+                imageUrl:
+                  type: string
+                  format: uri
+                saveToPondId:
+                  type: string
+      responses:
+        "200":
+          description: Scan updated
+    delete:
+      tags:
+        - Scans
+      summary: Delete a scan result
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Scan deleted
+
+  /products/{id}:
+    get:
+      tags:
+        - Products
+      summary: Get a single product
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Product details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  product:
+                    $ref: "#/components/schemas/Product"
+    put:
+      tags:
+        - Products
+      summary: Update a product (admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                price:
+                  type: number
+                sku:
+                  type: string
+                description:
+                  type: string
+      responses:
+        "200":
+          description: Product updated
+    delete:
+      tags:
+        - Products
+      summary: Delete a product (admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Product deleted
+
+  /cart/{productId}:
+    put:
+      tags:
+        - Cart
+      summary: Update item quantity in cart
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: productId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - qty
+              properties:
+                qty:
+                  type: integer
+                  minimum: 1
+      responses:
+        "200":
+          description: Cart item updated
+    delete:
+      tags:
+        - Cart
+      summary: Remove item from cart
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: productId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Item removed
+
+  /cart:
+    delete:
+      tags:
+        - Cart
+      summary: Clear entire cart
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Cart cleared
+
+  /orders:
+    get:
+      tags:
+        - Orders
+      summary: Get all orders (user's own orders, or all orders if admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [pending, completed, cancelled]
+        - in: query
+          name: userId
+          schema:
+            type: string
+            description: Filter by user ID (admin only)
+        - in: query
+          name: isActive
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: List of orders
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  page:
+                    type: integer
+                  limit:
+                    type: integer
+                  total:
+                    type: integer
+                  totalPages:
+                    type: integer
+                  orders:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Order"
+    post:
+      tags:
+        - Orders
+      summary: Create a new order manually
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - items
+              properties:
+                items:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - product
+                      - qty
+                    properties:
+                      product:
+                        type: string
+                      qty:
+                        type: integer
+                        minimum: 1
+                status:
+                  type: string
+                  enum: [pending, completed, cancelled]
+      responses:
+        "201":
+          description: Order created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  order:
+                    $ref: "#/components/schemas/Order"
+
+  /orders/{id}:
+    get:
+      tags:
+        - Orders
+      summary: Get a single order
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Order details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  order:
+                    $ref: "#/components/schemas/Order"
+    put:
+      tags:
+        - Orders
+      summary: Update order status
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [pending, completed, cancelled]
+      responses:
+        "200":
+          description: Order updated
+    delete:
+      tags:
+        - Orders
+      summary: Cancel an order (only if pending)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Order cancelled
+
+  /users:
+    get:
+      tags:
+        - Users
+      summary: Get all users (admin only) with search and filtering
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+        - in: query
+          name: isActive
+          schema:
+            type: boolean
+        - in: query
+          name: role
+          schema:
+            type: string
+            enum: [user, admin, expert]
+        - in: query
+          name: search
+          schema:
+            type: string
+            description: Search by username, email, or fullName
+        - in: query
+          name: subLevel
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  page:
+                    type: integer
+                  limit:
+                    type: integer
+                  total:
+                    type: integer
+                  totalPages:
+                    type: integer
+                  users:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/User"
+
+  /users/{id}:
+    get:
+      tags:
+        - Users
+      summary: Get user information (own profile or admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  user:
+                    $ref: "#/components/schemas/User"
+    put:
+      tags:
+        - Users
+      summary: Update user information (own profile or admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                fullName:
+                  type: string
+                phone:
+                  type: string
+                role:
+                  type: string
+                  enum: [user, admin, expert]
+                  description: Only admin can change role
+      responses:
+        "200":
+          description: User updated
+    delete:
+      tags:
+        - Users
+      summary: Delete a user (admin only or own account)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User deleted
+
+  /users/{id}/subscription:
+    post:
+      tags:
+        - Users
+      summary: Update user subscription level
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - subLevel
+              properties:
+                subLevel:
+                  type: integer
+                  minimum: 0
+      responses:
+        "200":
+          description: Subscription updated
