@@ -14,13 +14,13 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (fontsLoaded) {
-      // Hide splash screen once fonts are loaded
+      // Hide splash screen once fonts are ready
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded]);
 
   if (!fontsLoaded) {
-    return null;
+    return null; // Splash screen stays visible
   }
 
   return (
